@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@500;600;700;800;900&display=swap');
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind base;
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind components;
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind utilities;
+
+/* Global Styles */
+:root {
+  --ui-bg: #f3f5f7;
+  --ui-surface: #ffffff;
+  --ui-border: #e2e8f0;
+  --ui-text: #0f172a;
+  --ui-muted: #475569;
+  --ui-radius: 0.75rem;
+  --ui-radius-lg: 1rem;
+  --ui-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ui-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply text-slate-900;
+  background: var(--ui-bg);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply font-bold;
+}
+
+/* Links */
+a {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply transition-colors duration-200;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #16a34a;
+  outline-offset: 2px;
+}
+
+/* Buttons */
+button {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply transition-all duration-200;
+}
+
+/* Forms */
+input,
+select,
+textarea {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply transition-colors duration-200;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply outline-none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply bg-primary-600 rounded-full hover:bg-primary-700;
+}
+
+/* Selection */
+::selection {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply bg-primary-600 text-white;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Utility Classes */
+.text-gradient {
+  /* stylelint-disable-next-line at-rule-no-unknown */
+  @apply bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent;
+}
+
+.shadow-premium {
+  box-shadow: 0 20px 25px -5px rgba(22, 163, 74, 0.15), 0 10px 10px -5px rgba(22, 163, 74, 0.1);
+}
+
+.backdrop-blur-premium {
+  backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive Container */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@screen lg {
+  .container {
+    max-width: 80rem;
+  }
+}

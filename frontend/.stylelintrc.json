@@ -1,0 +1,11 @@
+{
+  "overrides": [
+    {
+      "files": ["**/*.css"],
+      "customSyntax": "postcss-scss",
+      "rules": {
+        "at-rule-no-unknown": null
+      }
+    }
+  ]
+}
