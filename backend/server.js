@@ -1,13 +1,16 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 const path = require('path');
+const multer = require('multer');
 const { syncDatabase } = require('./models');
 const { initSocket } = require('./socket');
 
-// Charger les variables d'environnement
-dotenv.config({ path: path.join(__dirname, '.env') });
+// Charger les variables d'environnement (seulement en local)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.join(__dirname, '.env') });
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -19,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Log de toutes les requêtes (Debug)
 app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.originalUrl}`);
+  console.log(`🔥 ${req.method} ${req.originalUrl}`);
   next();
 });
 
@@ -48,13 +51,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/favorites', favoriteRoutes); // Corrected path
+app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/agencies', agencyRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/promo-codes', promoCodeRoutes);
-app.use('/api/loyalty', loyaltyRoutes); // Corrected from loyaltyPointRoutes
+app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
@@ -78,8 +81,7 @@ app.get('/', (req, res) => {
       contracts: '/api/contracts',
       favorites: '/api/favorites',
       admin: '/api/admin',
-      manager: '/api/manager'
-      ,
+      manager: '/api/manager',
       messages: '/api/messages'
     }
   });
@@ -95,7 +97,28 @@ app.use((req, res) => {
 
 // Gestion globale des erreurs
 app.use((err, req, res, next) => {
-  console.error('❌ Erreur serveur:', err);
+  console.error('Erreur serveur:', err);
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Fichier trop volumineux (max 10MB par document).'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: 'Erreur upload: ' + err.message
+    });
+  }
+
+  if (err && err.message && err.message.toLowerCase().includes('type de fichier')) {
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+
   res.status(500).json({
     error: 'Erreur serveur interne',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -127,4 +150,3 @@ const startServer = async () => {
 };
 
 startServer();
-
