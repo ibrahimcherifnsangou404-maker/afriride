@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import { Search, Filter, Car, Calendar } from 'lucide-react';
 import { vehicleService } from '../services/vehicleService';
 import { Footer } from '../components/Layout/Footer';
+import { favoriteService } from '../services/favoriteService';
+import { AuthContext } from '../context/AuthContext';
 import { Card, Button, EmptyState, Skeleton } from '../components/UI';
 import VehicleCard from '../components/VehicleCard';
 
@@ -13,6 +15,16 @@ function VehiclesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+  const { isAuthenticated } = useContext(AuthContext);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -28,20 +40,41 @@ function VehiclesPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const term = filters.search.trim();
+    if (term.length > 0 && term.length < 2) return;
+    const timer = setTimeout(() => {
+      applyFilters(1);
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [filters.search]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [vehiclesData, categoriesData, agenciesData] = await Promise.all([
-        vehicleService.getVehicles(),
+      const favoritesPromise = isAuthenticated ? favoriteService.getMyFavorites() : Promise.resolve({ data: [] });
+      const [vehiclesData, categoriesData, agenciesData, favoritesData] = await Promise.all([
+        vehicleService.getVehicles({ page: 1, limit: pagination.limit }),
         vehicleService.getCategories(),
-        vehicleService.getAgencies()
+        vehicleService.getAgencies(),
+        favoritesPromise
       ]);
 
       setVehicles(vehiclesData.data || []);
       setCategories(categoriesData.data || []);
       setAgencies(agenciesData.data || []);
+      setPagination(vehiclesData.pagination || {
+        page: 1,
+        limit: pagination.limit,
+        totalItems: vehiclesData.total || (vehiclesData.data || []).length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
+      const ids = (favoritesData?.data || []).map((f) => f.vehicleId);
+      setFavoriteIds(new Set(ids));
     } catch (error) {
       console.error('Erreur chargement donnees:', error);
     } finally {
@@ -56,11 +89,23 @@ function VehiclesPage() {
     }));
   };
 
-  const applyFilters = async () => {
+  const applyFilters = async (targetPage = 1) => {
     try {
       setIsRefreshing(true);
-      const vehiclesData = await vehicleService.getVehicles(filters);
+      const vehiclesData = await vehicleService.getVehicles({
+        ...filters,
+        page: targetPage,
+        limit: pagination.limit
+      });
       setVehicles(vehiclesData.data || []);
+      setPagination(vehiclesData.pagination || {
+        page: targetPage,
+        limit: pagination.limit,
+        totalItems: vehiclesData.total || (vehiclesData.data || []).length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: targetPage > 1
+      });
     } catch (error) {
       console.error('Erreur filtrage:', error);
     } finally {
@@ -105,16 +150,34 @@ function VehiclesPage() {
     return chips;
   };
 
-  const sortedVehicles = [...vehicles].sort((a, b) => {
+  const sortedVehicles = useMemo(() => [...vehicles].sort((a, b) => {
     const priceA = parseFloat(a?.pricePerDay || 0);
     const priceB = parseFloat(b?.pricePerDay || 0);
     if (sortBy === 'priceAsc') return priceA - priceB;
     if (sortBy === 'priceDesc') return priceB - priceA;
     if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
     return new Date(b.createdAt) - new Date(a.createdAt);
-  });
+  }), [vehicles, sortBy]);
 
-  const activeChips = getActiveFilterChips();
+  const activeChips = useMemo(() => getActiveFilterChips(), [filters, categories, agencies]);
+
+  const handleFavoriteChange = (vehicleId, isFavorite) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isFavorite) {
+        next.add(vehicleId);
+      } else {
+        next.delete(vehicleId);
+      }
+      return next;
+    });
+  };
+
+  const handlePageChange = (nextPage) => {
+    if (nextPage < 1 || nextPage > pagination.totalPages || nextPage === pagination.page) return;
+    applyFilters(nextPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
@@ -134,6 +197,12 @@ function VehiclesPage() {
                   name="search"
                   value={filters.search}
                   onChange={handleFilterChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      applyFilters(1);
+                    }
+                  }}
                   placeholder="Marque, modele ou agence..."
                   className="w-full pl-12 pr-4 py-3 rounded-lg text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-300"
                 />
@@ -291,7 +360,7 @@ function VehiclesPage() {
               <div className="mb-8">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div>
-                    <p className="text-slate-900 text-lg font-semibold tracking-tight">{vehicles.length} vehicule(s) disponible(s)</p>
+                    <p className="text-slate-900 text-lg font-semibold tracking-tight">{pagination.totalItems} vehicule(s) disponible(s)</p>
                     {filters.startDate && filters.endDate && (
                       <p className="text-sm text-slate-500 mt-1">Disponibilite verifiee du {filters.startDate} au {filters.endDate}</p>
                     )}
@@ -335,10 +404,36 @@ function VehiclesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sortedVehicles.map((vehicle) => (
                   <div key={vehicle.id} className="h-full">
-                    <VehicleCard vehicle={vehicle} />
+                    <VehicleCard
+                      vehicle={vehicle}
+                      initialIsLiked={favoriteIds.has(vehicle.id)}
+                      skipFavoriteCheck={isAuthenticated}
+                      onFavoriteChange={handleFavoriteChange}
+                    />
                   </div>
                 ))}
               </div>
+
+              {pagination.totalPages > 1 && (
+                <div className="mt-10 flex items-center justify-center gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={!pagination.hasPrevPage || isRefreshing}
+                  >
+                    Precedent
+                  </Button>
+                  <span className="text-sm font-medium text-slate-700">
+                    Page {pagination.page} / {pagination.totalPages}
+                  </span>
+                  <Button
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={!pagination.hasNextPage || isRefreshing}
+                  >
+                    Suivant
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -14,6 +14,8 @@ export const vehicleService = {
     if (filters.search) queryParams.append('search', filters.search);
     if (filters.startDate) queryParams.append('startDate', filters.startDate);
     if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.page) queryParams.append('page', filters.page);
+    if (filters.limit) queryParams.append('limit', filters.limit);
 
     const response = await api.get(`/vehicles?${queryParams.toString()}`);
     return response.data;

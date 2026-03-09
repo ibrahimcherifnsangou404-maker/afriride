@@ -26,11 +26,13 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Log de toutes les requêtes (Debug)
-app.use((req, res, next) => {
-  console.log(`🔥 ${req.method} ${req.originalUrl}`);
-  next();
-});
+// Log des requêtes uniquement en développement (réduit le bruit et la latence en production)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`🔥 ${req.method} ${req.originalUrl}`);
+    next();
+  });
+}
 
 // Static files pour les uploads
 app.use('/uploads', express.static('uploads'));

@@ -14,8 +14,8 @@ export const managerService = {
   },
 
   // Réservations de l'agence
-  getAgencyBookings: async () => {
-    const response = await api.get('/manager/bookings');
+  getAgencyBookings: async (filters = {}) => {
+    const response = await api.get('/manager/bookings', { params: filters });
     return response.data;
   },
 

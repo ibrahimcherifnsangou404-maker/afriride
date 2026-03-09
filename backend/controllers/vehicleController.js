@@ -15,8 +15,14 @@ const getVehicles = async (req, res) => {
       fuelType,
       search,
       startDate,
-      endDate
+      endDate,
+      page = '1',
+      limit = '12'
     } = req.query;
+
+    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 48);
+    const offset = (pageNumber - 1) * pageSize;
 
     // Construire les conditions de recherche
     let whereClause = { isAvailable: true };
@@ -102,7 +108,7 @@ const getVehicles = async (req, res) => {
     }
 
     // RÃ©cupÃ©rer les vÃ©hicules
-    const vehicles = await Vehicle.findAll({
+    const { count, rows: vehicles } = await Vehicle.findAndCountAll({
       where: whereClause,
       include: [
         {
@@ -116,13 +122,25 @@ const getVehicles = async (req, res) => {
           attributes: ['id', 'name']
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      limit: pageSize,
+      offset,
+      distinct: true
     });
 
     res.status(200).json({
       success: true,
       count: vehicles.length,
+      total: count,
       data: vehicles,
+      pagination: {
+        page: pageNumber,
+        limit: pageSize,
+        totalItems: count,
+        totalPages: Math.max(Math.ceil(count / pageSize), 1),
+        hasNextPage: offset + vehicles.length < count,
+        hasPrevPage: pageNumber > 1
+      },
       filters: {
         startDate: startDate || null,
         endDate: endDate || null,

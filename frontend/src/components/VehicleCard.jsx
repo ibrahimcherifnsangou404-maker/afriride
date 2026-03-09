@@ -6,11 +6,11 @@ import { favoriteService } from '../services/favoriteService';
 import { AuthContext } from '../context/AuthContext';
 import { API_BASE_URL } from '../services/api';
 
-const VehicleCard = ({ vehicle }) => {
+const VehicleCard = ({ vehicle, initialIsLiked = false, skipFavoriteCheck = false, onFavoriteChange = null }) => {
     const { isAuthenticated } = useContext(AuthContext);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
-    const [isLiked, setIsLiked] = useState(false);
+    const [isLiked, setIsLiked] = useState(initialIsLiked);
     const [likeLoading, setLikeLoading] = useState(false);
     const vehicleId = vehicle?.id;
 
@@ -20,6 +20,9 @@ const VehicleCard = ({ vehicle }) => {
             const response = await favoriteService.checkFavoriteStatus(vehicleId);
             if (response.success) {
                 setIsLiked(response.isFavorite);
+                if (typeof onFavoriteChange === 'function') {
+                    onFavoriteChange(vehicle.id, response.isFavorite);
+                }
             }
         } catch {
             // Silencieux si erreur (pas critique pour une carte)
@@ -28,10 +31,14 @@ const VehicleCard = ({ vehicle }) => {
 
     // Vérifier si le véhicule est favori
     useEffect(() => {
-        if (isAuthenticated && vehicleId) {
+        if (!skipFavoriteCheck && isAuthenticated && vehicleId) {
             checkFavorite();
         }
-    }, [isAuthenticated, vehicleId, checkFavorite]);
+    }, [skipFavoriteCheck, isAuthenticated, vehicleId, checkFavorite]);
+
+    useEffect(() => {
+        setIsLiked(Boolean(initialIsLiked));
+    }, [initialIsLiked, vehicleId]);
 
     const toggleLike = async (e) => {
         e.preventDefault(); // Empêcher la navigation
@@ -47,6 +54,9 @@ const VehicleCard = ({ vehicle }) => {
             const response = await favoriteService.toggleFavorite(vehicle.id);
             if (response.success) {
                 setIsLiked(response.isFavorite);
+                if (typeof onFavoriteChange === 'function') {
+                    onFavoriteChange(vehicle.id, response.isFavorite);
+                }
             }
         } catch (error) {
             console.error('Erreur like:', error);

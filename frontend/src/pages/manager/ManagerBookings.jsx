@@ -1,8 +1,8 @@
-ï»¿import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Car, Calendar, Phone, Mail, User, CheckCircle, XCircle,
-  Clock, Search, Filter, AlertCircle, ArrowRight
+  Car, Calendar, Phone, Mail, CheckCircle, XCircle,
+  Search, ArrowRight
 } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { contractService } from '../../services/contractService';
@@ -18,31 +18,53 @@ export default function ManagerBookings() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [toasts, setToasts] = useState([]);
   const [contractLoadingByBooking, setContractLoadingByBooking] = useState({});
   const [approvals, setApprovals] = useState([]);
-  const loadBookings = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await managerService.getAgencyBookings();
-      setBookings(response.data);
-    } catch (error) {
-      console.error('Erreur chargement rÃ©servations:', error);
-      const id = Math.random();
-      setToasts((prev) => [...prev, { id, message: 'Erreur lors du chargement des rÃ©servations', type: 'error' }]);
-      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
 
   const addToast = (message, type = 'info') => {
     const id = Math.random();
     setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
-    const loadApprovals = useCallback(async () => {
+  const loadBookings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await managerService.getAgencyBookings({
+        status: filter,
+        q: debouncedSearch,
+        page: pagination.page,
+        limit: pagination.limit
+      });
+
+      setBookings(response.data || []);
+      setPagination(response.pagination || {
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems: (response.data || []).length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: pagination.page > 1
+      });
+    } catch (error) {
+      console.error('Erreur chargement réservations:', error);
+      addToast('Erreur lors du chargement des réservations', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, debouncedSearch, pagination.page, pagination.limit]);
+
+  const loadApprovals = useCallback(async () => {
     try {
       const response = await managerService.getApprovals('pending');
       setApprovals(response.data || []);
@@ -56,9 +78,26 @@ export default function ManagerBookings() {
       navigate('/login');
       return;
     }
-    loadBookings();
     loadApprovals();
-  }, [isAuthenticated, user, navigate, loadBookings, loadApprovals]);
+  }, [isAuthenticated, user, navigate, loadApprovals]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, [filter, debouncedSearch]);
+
+  useEffect(() => {
+    if (!isAuthenticated || (user?.role !== 'manager' && user?.role !== 'admin')) {
+      return;
+    }
+    loadBookings();
+  }, [isAuthenticated, user, loadBookings]);
 
   const handleUpdateStatus = async (bookingId, newStatus) => {
     if (!window.confirm(`Confirmer le changement de statut vers "${newStatus}" ?`)) return;
@@ -68,14 +107,14 @@ export default function ManagerBookings() {
           ? await managerService.confirmBooking(bookingId)
           : newStatus === 'completed'
             ? await managerService.completeBooking(bookingId)
-          : await managerService.rejectBooking(bookingId);
+            : await managerService.rejectBooking(bookingId);
 
       if (response.success) {
-        addToast('Statut mis Ã  jour avec succÃ¨s', 'success');
+        addToast('Statut mis à jour avec succès', 'success');
         loadBookings();
       }
     } catch (error) {
-      addToast(error?.response?.data?.message || 'Erreur lors de la mise Ã  jour', 'error');
+      addToast(error?.response?.data?.message || 'Erreur lors de la mise à jour', 'error');
     }
   };
 
@@ -86,7 +125,7 @@ export default function ManagerBookings() {
       const contracts = response?.data?.data || [];
 
       if (!contracts.length) {
-        addToast('Aucun contrat trouvÃ© pour cette rÃ©servation', 'error');
+        addToast('Aucun contrat trouvé pour cette réservation', 'error');
         return;
       }
 
@@ -100,14 +139,14 @@ export default function ManagerBookings() {
   };
 
   const handleApprovalAction = async (approvalId, action) => {
-    const note = window.prompt(action === 'approve' ? 'Note (optionnelle) approbation:' : 'Motif de rejet (optionnel):' ) || '';
+    const note = window.prompt(action === 'approve' ? 'Note (optionnelle) approbation:' : 'Motif de rejet (optionnel):') || '';
     try {
       if (action === 'approve') {
         await managerService.approveRequest(approvalId, note);
       } else {
         await managerService.rejectRequest(approvalId, note);
       }
-      addToast('Demande traitÃ©e avec succÃ¨s', 'success');
+      addToast('Demande traitée avec succès', 'success');
       loadApprovals();
       loadBookings();
     } catch (error) {
@@ -115,20 +154,15 @@ export default function ManagerBookings() {
     }
   };
 
-  const filteredBookings = bookings.filter(b => {
-    const matchesFilter = filter === 'all' || b.status === filter;
-    const matchesSearch =
-      (b?.vehicle?.brand?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (b?.user?.firstName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (b?.user?.lastName?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const handlePageChange = (nextPage) => {
+    if (nextPage < 1 || nextPage > pagination.totalPages || nextPage === pagination.page) return;
+    setPagination((prev) => ({ ...prev, page: nextPage }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 lg:p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
-
-        {/* Toast Container */}
         <div className="fixed top-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
           {toasts.map((t) => (
             <div key={t.id} className="pointer-events-auto">
@@ -137,13 +171,10 @@ export default function ManagerBookings() {
           ))}
         </div>
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-              RÃ©servations
-            </h1>
-            <p className="text-slate-500 font-medium">GÃ©rez et suivez toutes les locations</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Réservations</h1>
+            <p className="text-slate-500 font-medium">Gérez et suivez toutes les locations ({pagination.totalItems})</p>
           </div>
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
             {['all', 'pending', 'confirmed', 'in_progress'].map((status) => (
@@ -151,31 +182,26 @@ export default function ManagerBookings() {
                 key={status}
                 onClick={() => setFilter(status)}
                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filter === status
-                    ? 'bg-slate-900 text-white shadow-md'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}
               >
-                {status === 'all' ? 'Toutes' :
-                  status === 'pending' ? 'En attente' :
-                    status === 'confirmed' ? 'ConfirmÃ©es' : 'En cours'}
+                {status === 'all' ? 'Toutes' : status === 'pending' ? 'En attente' : status === 'confirmed' ? 'Confirmées' : 'En cours'}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Toolbar */}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Rechercher un client, un vÃ©hicule..."
+            placeholder="Rechercher un client, un véhicule..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 shadow-sm text-sm font-medium"
           />
         </div>
 
-        {/* Approvals Queue */}
         {approvals.length > 0 && (
           <div className="bg-white rounded-2xl p-5 border border-amber-200 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Demandes d approbation en attente ({approvals.length})</h3>
@@ -194,18 +220,8 @@ export default function ManagerBookings() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApprovalAction(approval.id, 'approve')}
-                      className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"
-                    >
-                      Approuver
-                    </button>
-                    <button
-                      onClick={() => handleApprovalAction(approval.id, 'reject')}
-                      className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700"
-                    >
-                      Rejeter
-                    </button>
+                    <button onClick={() => handleApprovalAction(approval.id, 'approve')} className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700">Approuver</button>
+                    <button onClick={() => handleApprovalAction(approval.id, 'reject')} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700">Rejeter</button>
                   </div>
                 </div>
               ))}
@@ -213,29 +229,26 @@ export default function ManagerBookings() {
           </div>
         )}
 
-        {/* Content */}
         {loading ? (
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-slate-600 font-medium">Chargement des rÃ©servations...</p>
+              <p className="text-slate-600 font-medium">Chargement des réservations...</p>
             </div>
           </div>
-        ) : filteredBookings.length === 0 ? (
+        ) : bookings.length === 0 ? (
           <div className="bg-white rounded-3xl p-16 text-center border border-slate-100 shadow-sm">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
               <Calendar className="w-10 h-10" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucune rÃ©servation trouvÃ©e</h3>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucune réservation trouvée</h3>
             <p className="text-slate-500">Essayez de modifier vos filtres de recherche.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredBookings.map((booking) => (
+            {bookings.map((booking) => (
               <div key={booking.id} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_4px_20px_-1px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all group">
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-
-                  {/* Vehicle Info */}
                   <div className="flex gap-4 min-w-[300px]">
                     <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
                       {booking.vehicle?.images?.[0] ? (
@@ -250,7 +263,6 @@ export default function ManagerBookings() {
                     </div>
                   </div>
 
-                  {/* Customer Info */}
                   <div className="flex-1 border-l border-slate-100 pl-6 hidden lg:block">
                     <div className="flex items-center gap-3 mb-1">
                       <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
@@ -264,10 +276,9 @@ export default function ManagerBookings() {
                     </div>
                   </div>
 
-                  {/* Period & Price */}
                   <div className="flex items-center gap-8 min-w-[200px]">
                     <div className="text-center">
-                      <p className="text-xs font-bold text-slate-400 uppercase">PÃ©riode</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase">Période</p>
                       <p className="text-sm font-bold text-slate-700">
                         {new Date(booking.startDate).toLocaleDateString()}
                         <ArrowRight className="inline w-3 h-3 mx-1 text-slate-300" />
@@ -279,7 +290,6 @@ export default function ManagerBookings() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex items-center justify-end gap-2 ml-auto">
                     <button
                       onClick={() => handleOpenContract(booking.id)}
@@ -290,58 +300,57 @@ export default function ManagerBookings() {
                     </button>
                     {booking.status === 'pending' && (
                       <>
-                        <button
-                          onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
-                          className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors font-bold flex items-center gap-2 text-sm px-4"
-                        >
+                        <button onClick={() => handleUpdateStatus(booking.id, 'confirmed')} className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors font-bold flex items-center gap-2 text-sm px-4">
                           <CheckCircle className="w-4 h-4" /> Valider
                         </button>
-                        <button
-                          onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
-                          className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
-                          title="Refuser"
-                        >
+                        <button onClick={() => handleUpdateStatus(booking.id, 'cancelled')} className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors" title="Refuser">
                           <XCircle className="w-5 h-5" />
                         </button>
                       </>
                     )}
                     {(booking.status === 'confirmed' || booking.status === 'in_progress') && (
-                      <button
-                        onClick={() => handleUpdateStatus(booking.id, 'completed')}
-                        className="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-bold flex items-center gap-2 text-sm px-4"
-                      >
+                      <button onClick={() => handleUpdateStatus(booking.id, 'completed')} className="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-bold flex items-center gap-2 text-sm px-4">
                         <CheckCircle className="w-4 h-4" /> Terminer
                       </button>
                     )}
                     <div className={`px-4 py-1.5 rounded-full text-xs font-bold ${booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                        booking.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                          booking.status === 'in_progress' ? 'bg-emerald-100 text-emerald-700' :
-                            booking.status === 'completed' ? 'bg-slate-100 text-slate-600' :
-                              'bg-red-100 text-red-700'
+                      booking.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                        booking.status === 'in_progress' ? 'bg-emerald-100 text-emerald-700' :
+                          booking.status === 'completed' ? 'bg-slate-100 text-slate-600' :
+                            'bg-red-100 text-red-700'
                       }`}>
                       {booking.status === 'pending' ? 'En attente' :
-                        booking.status === 'confirmed' ? 'ConfirmÃ©e' :
+                        booking.status === 'confirmed' ? 'Confirmée' :
                           booking.status === 'in_progress' ? 'En cours' :
-                            booking.status === 'completed' ? 'TerminÃ©e' : 'AnnulÃ©e'}
+                            booking.status === 'completed' ? 'Terminée' : 'Annulée'}
                     </div>
                   </div>
-
                 </div>
               </div>
             ))}
+
+            {pagination.totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrevPage || loading}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Précédent
+                </button>
+                <span className="text-sm font-semibold text-slate-700">Page {pagination.page} / {pagination.totalPages}</span>
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNextPage || loading}
+                  className="px-4 py-2 rounded-lg bg-slate-900 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Suivant
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-

@@ -132,7 +132,29 @@ const getAgencyVehicles = async (req, res) => {
 const getAgencyBookings = async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin';
-    const bookings = await Booking.findAll({
+    const { status = 'all', q = '', page = '1', limit = '12' } = req.query;
+    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 50);
+    const offset = (pageNumber - 1) * pageSize;
+    const normalizedSearch = String(q || '').trim();
+
+    const bookingWhere = {};
+    if (status && status !== 'all') {
+      bookingWhere.status = status;
+    }
+
+    if (normalizedSearch) {
+      bookingWhere[Op.or] = [
+        { '$vehicle.brand$': { [Op.iLike]: `%${normalizedSearch}%` } },
+        { '$vehicle.model$': { [Op.iLike]: `%${normalizedSearch}%` } },
+        { '$user.first_name$': { [Op.iLike]: `%${normalizedSearch}%` } },
+        { '$user.last_name$': { [Op.iLike]: `%${normalizedSearch}%` } },
+        { '$user.email$': { [Op.iLike]: `%${normalizedSearch}%` } }
+      ];
+    }
+
+    const { count, rows: bookings } = await Booking.findAndCountAll({
+      where: bookingWhere,
       include: [
         {
           model: Vehicle,
@@ -146,19 +168,32 @@ const getAgencyBookings = async (req, res) => {
           attributes: ['firstName', 'lastName', 'email', 'phone']
         }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      limit: pageSize,
+      offset,
+      distinct: true,
+      subQuery: false
     });
 
     res.status(200).json({
       success: true,
       count: bookings.length,
-      data: bookings
+      total: count,
+      data: bookings,
+      pagination: {
+        page: pageNumber,
+        limit: pageSize,
+        totalItems: count,
+        totalPages: Math.max(Math.ceil(count / pageSize), 1),
+        hasNextPage: offset + bookings.length < count,
+        hasPrevPage: pageNumber > 1
+      }
     });
   } catch (error) {
-    console.error('Erreur rÃ©cupÃ©ration rÃ©servations:', error);
+    console.error('Erreur récupération réservations:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la rÃ©cupÃ©ration des rÃ©servations',
+      message: 'Erreur lors de la récupération des réservations',
       error: error.message
     });
   }
