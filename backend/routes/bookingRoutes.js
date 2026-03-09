@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const {
   createBooking,
@@ -6,6 +6,7 @@ const {
   requestBookingApproval,
   getMyBookings,
   getBookingById,
+  getCancellationPreview,
   cancelBooking,
   updateBookingStatus
 } = require('../controllers/bookingController');
@@ -15,21 +16,23 @@ const { protect, authorize } = require('../middleware/auth');
 // Disponibilite temps reel (public)
 router.get('/availability', checkAvailability);
 
-// Routes protégées (Client)
+// Routes protÃ©gÃ©es (Client)
 router.post('/', protect, createBooking);
 router.get('/my-bookings', protect, getMyBookings);
 
-// 🆕 Route pour accepter le contrat (AVANT :id)
+// ðŸ†• Route pour accepter le contrat (AVANT :id)
 router.post('/:bookingId/accept-contract', protect, acceptContract);
 router.post('/:id/request-approval', protect, requestBookingApproval);
 
-// Routes avec paramètre ID
+// Routes avec paramÃ¨tre ID
 router.get('/:id', protect, getBookingById);
+router.get('/:id/cancellation-preview', protect, getCancellationPreview);
 router.put('/:id/cancel', protect, cancelBooking);
 
-// Routes protégées (Manager/Admin)
+// Routes protÃ©gÃ©es (Manager/Admin)
 router.put('/:id/status', protect, authorize('manager', 'admin'), updateBookingStatus);
 
 module.exports = router;
+
 
 

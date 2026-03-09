@@ -264,7 +264,14 @@ function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-500">
-            En continuant, vous acceptez nos conditions et notre politique de confidentialité.
+            En continuant, vous acceptez nos{' '}
+            <Link to="/conditions-utilisation" className="text-indigo-600 hover:text-indigo-700">
+              conditions d'utilisation
+            </Link>{' '}
+            et notre{' '}
+            <Link to="/politique-confidentialite" className="text-indigo-600 hover:text-indigo-700">
+              politique de confidentialité
+            </Link>.
           </p>
         </div>
 

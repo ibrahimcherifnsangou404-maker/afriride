@@ -11,7 +11,12 @@ const {
   updateCategory,
   deleteCategory,
   getAllUsers,
-  createManager
+  createManager,
+  getPendingKYC,
+  approveKYC,
+  rejectKYC,
+  getMessageReports,
+  reviewMessageReport
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -37,5 +42,14 @@ router.delete('/categories/:id', deleteCategory);
 // Utilisateurs
 router.get('/users', getAllUsers);
 router.post('/users/create-manager', createManager);
+
+// KYC
+router.get('/kyc/pending', getPendingKYC);
+router.put('/kyc/:id/approve', approveKYC);
+router.put('/kyc/:id/reject', rejectKYC);
+
+// Modération messagerie
+router.get('/message-reports', getMessageReports);
+router.put('/message-reports/:id', reviewMessageReport);
 
 module.exports = router;

@@ -15,5 +15,7 @@ router.post('/kyc', upload.fields([
 
 router.get('/profile', userController.getProfile);
 router.put('/profile', userController.updateProfile);
+router.get('/cookie-consent', userController.getCookieConsent);
+router.put('/cookie-consent', userController.updateCookieConsent);
 
 module.exports = router;

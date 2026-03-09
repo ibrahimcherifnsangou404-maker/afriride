@@ -21,6 +21,8 @@ function KYCPage() {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
 
     useEffect(() => {
         loadProfile();
@@ -42,6 +44,17 @@ function KYCPage() {
     const handleFileChange = (e, field) => {
         const file = e.target.files[0];
         if (file) {
+            if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+                setError('Type de fichier non autorise. Images (JPG, PNG, WEBP, HEIC) ou PDF uniquement.');
+                return;
+            }
+
+            if (file.size > MAX_FILE_SIZE) {
+                setError('Fichier trop volumineux (max 10MB par document).');
+                return;
+            }
+
+            setError('');
             setFiles(prev => ({ ...prev, [field]: file }));
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -50,6 +63,8 @@ function KYCPage() {
             reader.readAsDataURL(file);
         }
     };
+
+    const isPdf = (field) => files[field]?.type === 'application/pdf';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -68,7 +83,7 @@ function KYCPage() {
             formData.append('drivingLicense', files.drivingLicense);
 
             const response = await userService.submitKYC(formData);
-            if (response.data.success) {
+            if (response.success) {
                 setSuccess('Documents soumis avec succès !');
                 setTimeout(() => {
                     loadProfile();
@@ -76,7 +91,7 @@ function KYCPage() {
             }
         } catch (err) {
             console.error('Erreur soumission KYC:', err);
-            setError(err.response?.data?.message || 'Erreur lors de la soumission');
+            setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Erreur lors de la soumission');
         } finally {
             setSubmitting(false);
         }
@@ -148,7 +163,14 @@ function KYCPage() {
                     ${previews.idCardFront ? 'border-primary-500 bg-white' : 'border-slate-300 bg-slate-50 hover:border-primary-400 hover:bg-slate-100'}
                   `}>
                                         {previews.idCardFront ? (
+                                            isPdf('idCardFront') ? (
+                                                <div className="text-center p-6">
+                                                    <FileText className="w-10 h-10 text-slate-500 mx-auto mb-2" />
+                                                    <p className="text-sm text-slate-600">{files.idCardFront?.name || 'Document PDF'}</p>
+                                                </div>
+                                            ) : (
                                             <img src={previews.idCardFront} alt="ID Recto" className="w-full h-full object-cover" />
+                                            )
                                         ) : (
                                             <div className="text-center p-6">
                                                 <Camera className="w-10 h-10 text-slate-400 mx-auto mb-2" />
@@ -173,7 +195,14 @@ function KYCPage() {
                     ${previews.idCardBack ? 'border-primary-500 bg-white' : 'border-slate-300 bg-slate-50 hover:border-primary-400 hover:bg-slate-100'}
                   `}>
                                         {previews.idCardBack ? (
+                                            isPdf('idCardBack') ? (
+                                                <div className="text-center p-6">
+                                                    <FileText className="w-10 h-10 text-slate-500 mx-auto mb-2" />
+                                                    <p className="text-sm text-slate-600">{files.idCardBack?.name || 'Document PDF'}</p>
+                                                </div>
+                                            ) : (
                                             <img src={previews.idCardBack} alt="ID Verso" className="w-full h-full object-cover" />
+                                            )
                                         ) : (
                                             <div className="text-center p-6">
                                                 <Camera className="w-10 h-10 text-slate-400 mx-auto mb-2" />
@@ -198,7 +227,14 @@ function KYCPage() {
                     ${previews.drivingLicense ? 'border-primary-500 bg-white' : 'border-slate-300 bg-slate-50 hover:border-primary-400 hover:bg-slate-100'}
                   `}>
                                         {previews.drivingLicense ? (
+                                            isPdf('drivingLicense') ? (
+                                                <div className="text-center p-6">
+                                                    <FileText className="w-10 h-10 text-slate-500 mx-auto mb-2" />
+                                                    <p className="text-sm text-slate-600">{files.drivingLicense?.name || 'Document PDF'}</p>
+                                                </div>
+                                            ) : (
                                             <img src={previews.drivingLicense} alt="Permis" className="w-full h-full object-cover" />
+                                            )
                                         ) : (
                                             <div className="text-center p-6">
                                                 <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />

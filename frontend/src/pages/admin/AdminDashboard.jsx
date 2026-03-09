@@ -209,7 +209,7 @@ function AdminDashboard() {
           </div>
 
           {/* Second row - Supporting metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <Card className="bg-gradient-to-br from-cyan-50 to-cyan-50/50 border-cyan-200/50">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -234,6 +234,28 @@ function AdminDashboard() {
                 </div>
                 <div className="text-xs text-slate-600">
                   Types de véhicules disponibles
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-50/50 border-orange-200/50">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Annulations</span>
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                </div>
+                <div className="text-3xl font-black text-orange-700 mb-1">
+                  {dashboardData?.cancellationInsights?.cancelledCount || 0}
+                </div>
+                <div className="text-xs text-slate-600 mb-3">
+                  <span className="font-semibold text-orange-700">{dashboardData?.cancellationInsights?.refundedCount || 0}</span> remboursees
+                </div>
+                <div className="space-y-1.5">
+                  {(dashboardData?.cancellationInsights?.topReasons || []).slice(0, 2).map((item) => (
+                    <div key={item.reason} className="text-xs text-slate-600 truncate">
+                      <span className="font-semibold text-slate-700">{item.count}x</span> {item.reason}
+                    </div>
+                  ))}
                 </div>
               </div>
             </Card>

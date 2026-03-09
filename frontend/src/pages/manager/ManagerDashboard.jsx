@@ -492,7 +492,7 @@ function ManagerDashboard() {
                   title="Identités à vérifier"
                   subtitle="Validation documents KYC"
                   count={pendingCount} // Assuming we can use this or similar
-                  onClick={() => navigate('/manager/kyc')}
+                  onClick={() => user?.role === 'admin' && navigate('/admin/kyc')}
                   color="amber"
                 />
                 <QuickActionRow
@@ -608,6 +608,9 @@ function ManagerDashboard() {
 }
 
 export default ManagerDashboard;
+
+
+
 
 
 

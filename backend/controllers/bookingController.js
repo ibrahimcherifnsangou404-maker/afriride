@@ -1,4 +1,4 @@
-const { Booking, Vehicle, User, Agency, LoyaltyPoint, BookingApproval, Contract } = require('../models');
+const { Booking, Vehicle, User, Agency, LoyaltyPoint, BookingApproval, Contract, Payment, sequelize } = require('../models');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
 const {
@@ -14,6 +14,75 @@ const generateQuoteNumber = () => {
   const day = String(date.getDate()).padStart(2, '0');
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `QTE-${year}${month}${day}-${random}`;
+};
+
+const roundAmount = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+const getCancellationPolicy = ({ booking, paidAmount = 0, now = new Date() }) => {
+  const startAt = new Date(`${booking.startDate}T00:00:00`);
+  const msBeforeStart = startAt.getTime() - now.getTime();
+  const hoursBeforeStart = Number.isFinite(msBeforeStart) ? msBeforeStart / (1000 * 60 * 60) : 0;
+
+  if (booking.paymentStatus !== 'paid' || paidAmount <= 0) {
+    return {
+      tier: 'no_payment',
+      refundRate: 0,
+      reason: 'Aucun paiement confirme sur cette reservation'
+    };
+  }
+
+  if (hoursBeforeStart >= 72) {
+    return {
+      tier: 'flex_72h',
+      refundRate: 1,
+      reason: 'Annulation au moins 72h avant le depart'
+    };
+  }
+
+  if (hoursBeforeStart >= 24) {
+    return {
+      tier: 'mid_24h',
+      refundRate: 0.5,
+      reason: 'Annulation entre 24h et 72h avant le depart'
+    };
+  }
+
+  return {
+    tier: 'late_under_24h',
+    refundRate: 0,
+    reason: 'Annulation a moins de 24h du depart'
+  };
+};
+
+const getCancellationQuote = async (booking, now = new Date(), transaction = null) => {
+  const payments = await Payment.findAll({
+    where: { bookingId: booking.id },
+    order: [['createdAt', 'ASC']],
+    transaction
+  });
+
+  const totalPaid = payments
+    .filter((item) => item.status === 'completed')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalAlreadyRefunded = payments
+    .filter((item) => item.status === 'refunded')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  const refundableBase = Math.max(0, roundAmount(totalPaid - totalAlreadyRefunded));
+  const policy = getCancellationPolicy({ booking, paidAmount: refundableBase, now });
+  const refundAmount = roundAmount(refundableBase * policy.refundRate);
+
+  return {
+    now: now.toISOString(),
+    bookingStartDate: booking.startDate,
+    totalPaid: roundAmount(totalPaid),
+    totalAlreadyRefunded: roundAmount(totalAlreadyRefunded),
+    refundableBase,
+    refundAmount,
+    refundRate: policy.refundRate,
+    policyTier: policy.tier,
+    policyReason: policy.reason
+  };
 };
 
 // @desc    Créer une réservation
@@ -382,12 +451,49 @@ const getBookingById = async (req, res) => {
   }
 };
 
+// @desc    Apercu de la politique d'annulation et remboursement
+// @route   GET /api/bookings/:id/cancellation-preview
+// @access  Private
+const getCancellationPreview = async (req, res) => {
+  try {
+    const booking = await Booking.findByPk(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation non trouvee'
+      });
+    }
+
+    if (booking.userId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acces refuse'
+      });
+    }
+
+    const quote = await getCancellationQuote(booking);
+    return res.status(200).json({
+      success: true,
+      data: quote
+    });
+  } catch (error) {
+    console.error('Erreur apercu annulation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l apercu d annulation',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Annuler une réservation
 // @route   PUT /api/bookings/:id/cancel
 // @access  Private (Client)
 const cancelBooking = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
-    const booking = await Booking.findByPk(req.params.id);
+    const booking = await Booking.findByPk(req.params.id, { transaction });
 
     if (!booking) {
       return res.status(404).json({
@@ -495,13 +601,105 @@ const updateBookingStatus = async (req, res) => {
   }
 };
 
+const cancelBookingV2 = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const cancellationReason = String(req.body?.reason || '').trim();
+    if (cancellationReason.length < 5) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'La raison d annulation est requise (minimum 5 caracteres)'
+      });
+    }
+
+    const booking = await Booking.findByPk(req.params.id, { transaction });
+
+    if (!booking) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation non trouvee'
+      });
+    }
+
+    if (booking.userId !== req.user.id && req.user.role !== 'admin') {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n etes pas autorise a annuler cette reservation'
+      });
+    }
+
+    if (booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'in_progress') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Cette reservation ne peut pas etre annulee'
+      });
+    }
+
+    const quote = await getCancellationQuote(booking, new Date(), transaction);
+    const latestCompletedPayment = await Payment.findOne({
+      where: {
+        bookingId: booking.id,
+        status: 'completed'
+      },
+      order: [['createdAt', 'DESC']],
+      transaction
+    });
+
+    if (quote.refundAmount > 0) {
+      await Payment.create({
+        amount: quote.refundAmount,
+        paymentMethod: latestCompletedPayment?.paymentMethod || booking.paymentMethod || 'card',
+        phoneNumber: latestCompletedPayment?.phoneNumber || null,
+        bookingId: booking.id,
+        userId: booking.userId,
+        status: 'refunded',
+        transactionId: `RFN-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+      }, { transaction });
+      booking.paymentStatus = 'refunded';
+    }
+
+    booking.status = 'cancelled';
+    booking.notes = [
+      booking.notes,
+      `Raison annulation: ${cancellationReason}`,
+      `Annulation ${new Date().toISOString()} | politique=${quote.policyTier} | taux=${Math.round(quote.refundRate * 100)}% | remboursement=${quote.refundAmount}`
+    ].filter(Boolean).join('\n');
+    await booking.save({ transaction });
+    await transaction.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: quote.refundAmount > 0
+        ? 'Reservation annulee. Remboursement enregistre.'
+        : 'Reservation annulee. Aucun remboursement applicable.',
+      data: {
+        booking,
+        cancellation: quote
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Erreur annulation reservation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l annulation de la reservation',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   checkAvailability,
   requestBookingApproval,
   getMyBookings,
   getBookingById,
-  cancelBooking,
+  getCancellationPreview,
+  cancelBooking: cancelBookingV2,
   updateBookingStatus
 };
 

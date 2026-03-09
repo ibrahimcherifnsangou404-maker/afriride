@@ -1,4 +1,5 @@
 ﻿import { useState, useContext, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     User, Mail, Phone, Camera, Save, MapPin,
     Calendar, Shield, Award, Edit2, CheckCircle
@@ -145,6 +146,11 @@ function ProfilePage() {
                                 <div className="pt-4 border-t border-slate-100">
                                     <Button variant="outline" size="sm" className="w-full">Changer mot de passe</Button>
                                 </div>
+                                <div>
+                                    <Link to="/kyc" className="block">
+                                        <Button variant="outline" size="sm" className="w-full">Verifier mon identite (KYC)</Button>
+                                    </Link>
+                                </div>
                             </div>
                         </Card>
                     </div>
@@ -259,4 +265,5 @@ function ProfilePage() {
 }
 
 export default ProfilePage;
+
 

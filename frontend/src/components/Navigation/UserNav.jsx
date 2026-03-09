@@ -14,7 +14,8 @@ import {
   Receipt,
   ChevronDown,
   CalendarDays,
-  MessageCircle
+  MessageCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
@@ -40,7 +41,8 @@ export default function UserNav() {
     { label: 'Messages', icon: MessageCircle, path: '/messages' },
     { label: 'Factures', icon: Receipt, path: '/invoices' },
     { label: 'Favoris', icon: Heart, path: '/favorites' },
-    { label: 'Loyaute', icon: Wallet, path: '/my-loyalty-points' }
+    { label: 'Loyaute', icon: Wallet, path: '/my-loyalty-points' },
+    { label: 'Verification KYC', icon: ShieldCheck, path: '/kyc' }
   ];
 
   useEffect(() => {
@@ -170,6 +172,10 @@ export default function UserNav() {
                     <Link to="/settings" className="flex items-center space-x-2 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
                       <Settings className="w-4 h-4" />
                       <span>Parametres</span>
+                    </Link>
+                    <Link to="/kyc" className="flex items-center space-x-2 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Verification KYC</span>
                     </Link>
                     <button
                       onClick={() => {

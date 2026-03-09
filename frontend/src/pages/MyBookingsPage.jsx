@@ -82,15 +82,38 @@ function MyBookingsPage() {
   };
 
   const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir annuler cette réservation ?')) return;
     try {
-      const response = await bookingService.cancelBooking(bookingId);
+      const previewResponse = await bookingService.getCancellationPreview(bookingId);
+      const preview = previewResponse?.data;
+      const refundRatePct = Math.round((Number(preview?.refundRate || 0)) * 100);
+      const refundAmount = Number(preview?.refundAmount || 0);
+      const policyReason = preview?.policyReason || 'Politique standard';
+      const confirmMessage = [
+        'Confirmer l annulation de cette reservation ?',
+        '',
+        `Politique: ${policyReason}`,
+        `Remboursement: ${refundRatePct}% (${refundAmount.toLocaleString('fr-FR')} FCFA)`
+      ].join('\n');
+      if (!window.confirm(confirmMessage)) return;
+
+      const reason = window.prompt('Raison d annulation (obligatoire, 5 caracteres minimum):', '');
+      if (!reason || reason.trim().length < 5) {
+        alert('Veuillez renseigner une raison valide (minimum 5 caracteres).');
+        return;
+      }
+
+      const response = await bookingService.cancelBooking(bookingId, { reason: reason.trim() });
       if (response.success) {
+        const cancellation = response?.data?.cancellation;
+        if (cancellation) {
+          const refunded = Number(cancellation.refundAmount || 0).toLocaleString('fr-FR');
+          alert(`Reservation annulee. Remboursement applique: ${refunded} FCFA`);
+        }
         loadBookings();
       }
     } catch (error) {
       console.error('Erreur annulation réservation:', error);
-      alert('Erreur lors de l\'annulation');
+      alert(error.response?.data?.message || 'Erreur lors de l annulation');
     }
   };
 

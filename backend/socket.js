@@ -1,7 +1,9 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const { User, Conversation } = require('./models');
+const { Op } = require('sequelize');
+const { User, Conversation, Message } = require('./models');
 const { setSocketServer } = require('./services/socketService');
+const { markOnline, markOffline, isUserOnline } = require('./services/presenceService');
 
 const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
@@ -38,6 +40,10 @@ const initSocket = (httpServer) => {
   io.on('connection', (socket) => {
     const userId = socket.user.id;
     socket.join(`user:${userId}`);
+    const onlineSessions = markOnline(userId);
+    if (onlineSessions === 1) {
+      io.emit('presence:update', { userId, isOnline: true });
+    }
 
     socket.on('join_conversation', async ({ conversationId }) => {
       if (!conversationId) return;
@@ -48,11 +54,66 @@ const initSocket = (httpServer) => {
       if (!isMember) return;
 
       socket.join(`conversation:${conversationId}`);
+
+      const pendingDelivered = await Message.findAll({
+        where: {
+          conversationId,
+          senderId: { [Op.ne]: userId },
+          deliveredAt: { [Op.is]: null }
+        },
+        attributes: ['id']
+      });
+
+      if (pendingDelivered.length > 0) {
+        const deliveredAt = new Date();
+        const ids = pendingDelivered.map((item) => item.id);
+        await Message.update({ deliveredAt }, { where: { id: ids } });
+        io.to(`conversation:${conversationId}`).emit('message:delivered', {
+          conversationId,
+          messageIds: ids,
+          deliveredAt: deliveredAt.toISOString()
+        });
+      }
     });
 
     socket.on('leave_conversation', ({ conversationId }) => {
       if (!conversationId) return;
       socket.leave(`conversation:${conversationId}`);
+    });
+
+    socket.on('typing:start', async ({ conversationId }) => {
+      if (!conversationId) return;
+      const conversation = await Conversation.findByPk(conversationId);
+      if (!conversation) return;
+      const isMember = conversation.participantOneId === userId || conversation.participantTwoId === userId;
+      if (!isMember) return;
+
+      socket.to(`conversation:${conversationId}`).emit('typing:update', {
+        conversationId,
+        userId,
+        isTyping: true
+      });
+    });
+
+    socket.on('typing:stop', async ({ conversationId }) => {
+      if (!conversationId) return;
+      const conversation = await Conversation.findByPk(conversationId);
+      if (!conversation) return;
+      const isMember = conversation.participantOneId === userId || conversation.participantTwoId === userId;
+      if (!isMember) return;
+
+      socket.to(`conversation:${conversationId}`).emit('typing:update', {
+        conversationId,
+        userId,
+        isTyping: false
+      });
+    });
+
+    socket.on('disconnect', () => {
+      const remainingSessions = markOffline(userId);
+      if (remainingSessions === 0 && !isUserOnline(userId)) {
+        io.emit('presence:update', { userId, isOnline: false });
+      }
     });
   });
 

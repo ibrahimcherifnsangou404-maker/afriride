@@ -10,9 +10,6 @@ const {
   sendMessageToClient,
   getBookingDetail,
   getRevenueStats,
-  getPendingKYC,
-  approveKYC,
-  rejectKYC
 } = require('../controllers/managerController');
 const { protect, authorize } = require('../middleware/auth');
 const { getApprovals, approve, reject } = require('../controllers/approvalController');
@@ -39,11 +36,6 @@ router.get('/revenue', getRevenueStats);
 router.get('/approvals', getApprovals);
 router.put('/approvals/:id/approve', approve);
 router.put('/approvals/:id/reject', reject);
-
-// Routes KYC
-router.get('/kyc/pending', getPendingKYC);
-router.put('/kyc/:id/approve', approveKYC);
-router.put('/kyc/:id/reject', rejectKYC);
 
 module.exports = router;
 

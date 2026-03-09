@@ -2,7 +2,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Car, ArrowLeft, MapPin, Users, Fuel, Settings,
-  Calendar, Shield, CheckCircle, Phone, Mail, Star, CreditCard, Tag,
+  Calendar, Shield, CheckCircle, Phone, Mail, Star, CreditCard, Tag, MessageCircle,
   ChevronRight, Share2, Heart
 } from 'lucide-react';
 import { vehicleService } from '../services/vehicleService';
@@ -304,6 +304,26 @@ function VehicleDetailPage() {
     }
   };
 
+  const handleContactAgency = () => {
+    if (!vehicle?.agency?.id) return;
+
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: `/vehicles/${id}` } });
+      return;
+    }
+
+    const params = new URLSearchParams({
+      agencyId: vehicle.agency.id,
+      vehicleLabel: `${vehicle.brand} ${vehicle.model}`,
+      prefill: `Bonjour, je suis interesse par ${vehicle.brand} ${vehicle.model}${bookingData.startDate && bookingData.endDate ? ` du ${bookingData.startDate} au ${bookingData.endDate}` : ''}.`
+    });
+
+    if (bookingData.startDate) params.set('startDate', bookingData.startDate);
+    if (bookingData.endDate) params.set('endDate', bookingData.endDate);
+
+    navigate(`/messages?${params.toString()}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 pb-20 pt-20">
@@ -526,6 +546,16 @@ function VehicleDetailPage() {
                           <span>{vehicle.agency?.email}</span>
                         </div>
                       )}
+                    </div>
+                    <div className="mt-5">
+                      <Button
+                        onClick={handleContactAgency}
+                        className="w-full"
+                        variant="secondary"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Contacter l agence
+                      </Button>
                     </div>
                   </div>
                 </div>

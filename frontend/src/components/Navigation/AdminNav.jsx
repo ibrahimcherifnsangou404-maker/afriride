@@ -11,6 +11,8 @@ import {
   X,
   ChevronDown,
   Bell,
+  AlertCircle,
+  AlertTriangle,
   MessageSquare,
   MessageCircle,
   Eye,
@@ -39,6 +41,8 @@ export default function AdminNav() {
 
   const secondaryNav = [
     { label: 'Messagerie', icon: MessageCircle, path: '/messages' },
+    { label: 'Signalements', icon: AlertTriangle, path: '/admin/message-reports' },
+    { label: 'KYC', icon: AlertCircle, path: '/admin/kyc' },
     { label: 'Categories', icon: TicketCheck, path: '/admin/categories' },
     { label: 'Avis', icon: MessageSquare, path: '/admin/reviews' },
     { label: 'Codes promo', icon: Eye, path: '/admin/promo-codes' },

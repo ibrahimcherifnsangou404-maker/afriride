@@ -95,6 +95,16 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'profile_picture'
+  },
+  cookieConsentData: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'cookie_consent_data'
+  },
+  cookieConsentUpdatedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'cookie_consent_updated_at'
   }
 }, {
   tableName: 'users',

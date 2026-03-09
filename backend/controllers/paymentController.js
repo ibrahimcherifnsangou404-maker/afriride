@@ -1,4 +1,4 @@
-const { Payment, Booking, Vehicle, Contract, Agency, User, BookingApproval } = require('../models');
+﻿const { Payment, Booking, Vehicle, Contract, Agency, User, BookingApproval } = require('../models');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
@@ -155,7 +155,7 @@ const getConsolidatedInvoicesData = async (req, { month, year, q = '', userId = 
 };
 
 const paymentController = {
-  // Lister les factures/reçus selon le rôle
+  // Lister les factures/reÃ§us selon le rÃ´le
   getInvoices: async (req, res) => {
     try {
       const { status, paymentMethod, q, startDate, endDate } = req.query;
@@ -234,10 +234,10 @@ const paymentController = {
         data: normalized
       });
     } catch (error) {
-      console.error('Erreur récupération factures:', error);
+      console.error('Erreur rÃ©cupÃ©ration factures:', error);
       res.status(500).json({
         success: false,
-        message: 'Erreur lors de la récupération des factures',
+        message: 'Erreur lors de la rÃ©cupÃ©ration des factures',
         error: error.message
       });
     }
@@ -248,12 +248,39 @@ const paymentController = {
     try {
       const { bookingId, amount, paymentMethod, phoneNumber } = req.body;
       const userId = req.user.id;
+      const currentUser = await User.findByPk(userId, {
+        attributes: ['id', 'role', 'verificationStatus']
+      });
 
-      // Vérifier si la réservation existe
+      if (!currentUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'Utilisateur non trouve'
+        });
+      }
+
+      if (currentUser.role === 'client' && currentUser.verificationStatus !== 'verified') {
+        return res.status(403).json({
+          success: false,
+          errorCode: 'KYC_REQUIRED',
+          message: 'Votre identite doit etre verifiee avant de payer une reservation.',
+          action: { label: 'Completer le KYC', path: '/kyc' }
+        });
+      }
+
+      // VÃ©rifier si la rÃ©servation existe
       const booking = await Booking.findByPk(bookingId);
       if (!booking) {
-        return res.status(404).json({ message: 'Réservation non trouvée' });
+        return res.status(404).json({ message: 'RÃ©servation non trouvÃ©e' });
       }
+
+      if (req.user.role === 'client' && booking.userId !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Acces refuse a cette reservation'
+        });
+      }
+
 
       if (booking.status === 'cancelled' || booking.status === 'completed') {
         return res.status(400).json({
@@ -291,7 +318,7 @@ const paymentController = {
         });
       }
 
-      // Créer l'enregistrement de paiement
+      // CrÃ©er l'enregistrement de paiement
       const payment = await Payment.create({
         amount,
         paymentMethod,
@@ -305,7 +332,7 @@ const paymentController = {
       res.status(201).json({
         success: true,
         data: payment,
-        message: 'Paiement initié avec succès'
+        message: 'Paiement initiÃ© avec succÃ¨s'
       });
 
     } catch (error) {
@@ -323,10 +350,36 @@ const paymentController = {
       const payment = await Payment.findByPk(paymentId, { transaction: t });
       if (!payment) {
         await t.rollback();
-        return res.status(404).json({ message: 'Paiement non trouvé' });
+        return res.status(404).json({ message: 'Paiement non trouvÃ©' });
       }
 
-      // Simulation de délai de traitement (2 secondes)
+      if (req.user.role === 'client' && payment.userId !== req.user.id) {
+        await t.rollback();
+        return res.status(403).json({
+          success: false,
+          message: 'Acces refuse a ce paiement'
+        });
+      }
+
+      const paymentUser = await User.findByPk(payment.userId, {
+        attributes: ['id', 'role', 'verificationStatus'],
+        transaction: t
+      });
+
+      if (paymentUser && paymentUser.role === 'client' && paymentUser.verificationStatus !== 'verified') {
+        payment.status = 'failed';
+        await payment.save({ transaction: t });
+        await t.commit();
+        return res.status(403).json({
+          success: false,
+          errorCode: 'KYC_REQUIRED',
+          message: 'Paiement bloque: verification d identite requise avant confirmation.',
+          action: { label: 'Completer le KYC', path: '/kyc' }
+        });
+      }
+
+
+      // Simulation de dÃ©lai de traitement (2 secondes)
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const statusKey = (simulateStatus || 'success').toLowerCase();
@@ -334,7 +387,7 @@ const paymentController = {
       const isRefund = statusKey === 'refunded';
       const isFailure = ['failed', 'expired', 'cancelled'].includes(statusKey);
 
-      // Mise à jour du paiement (mapping vers enum existant)
+      // Mise Ã  jour du paiement (mapping vers enum existant)
       if (isSuccess) {
         payment.status = 'completed';
       } else if (isRefund) {
@@ -347,7 +400,7 @@ const paymentController = {
 
       await payment.save({ transaction: t });
 
-      // Mise à jour de la réservation
+      // Mise Ã  jour de la rÃ©servation
       const booking = await Booking.findByPk(payment.bookingId, {
         include: [{ model: Vehicle, as: 'vehicle', include: [{ model: Agency, as: 'agency' }] }],
         transaction: t
@@ -393,13 +446,13 @@ const paymentController = {
         if (isSuccess) {
           booking.paymentStatus = 'paid';
           booking.paymentMethod = payment.paymentMethod;
-          booking.status = 'confirmed'; // Confirmer la réservation
+          booking.status = 'confirmed'; // Confirmer la rÃ©servation
         } else if (isRefund) {
           booking.paymentStatus = 'refunded';
           booking.status = 'cancelled';
         } else {
           booking.paymentStatus = 'failed';
-          // Laisser la réservation en pending pour permettre un nouveau paiement
+          // Laisser la rÃ©servation en pending pour permettre un nouveau paiement
         }
         await booking.save({ transaction: t });
 
@@ -460,18 +513,18 @@ const paymentController = {
         });
 
         if (isSuccess) {
-          // Envoyer le reçu par email (non bloquant)
+          // Envoyer le reÃ§u par email (non bloquant)
           try {
             const user = await User.findByPk(booking.userId);
             const receiptBuffer = await paymentController.generateReceiptBuffer(payment, booking, booking.vehicle, booking.vehicle?.agency, user);
             await emailService.sendPaymentReceiptEmail(user, payment, booking, receiptBuffer);
           } catch (emailErr) {
-            console.warn('⚠️ Envoi reçu email échoué:', emailErr.message);
+            console.warn('âš ï¸ Envoi reÃ§u email Ã©chouÃ©:', emailErr.message);
           }
         }
       } else {
         await t.commit();
-        res.json({ success: true, data: payment, message: 'Paiement traité (Booking introuvable)' });
+        res.json({ success: true, data: payment, message: 'Paiement traitÃ© (Booking introuvable)' });
       }
 
     } catch (error) {
@@ -488,7 +541,7 @@ const paymentController = {
       const payment = await Payment.findByPk(id);
 
       if (!payment) {
-        return res.status(404).json({ message: 'Paiement non trouvé' });
+        return res.status(404).json({ message: 'Paiement non trouvÃ©' });
       }
 
       res.json({
@@ -498,7 +551,7 @@ const paymentController = {
 
     } catch (error) {
       console.error('Erreur statut paiement:', error);
-      res.status(500).json({ message: 'Erreur lors de la récupération du statut' });
+      res.status(500).json({ message: 'Erreur lors de la rÃ©cupÃ©ration du statut' });
     }
   },
 
@@ -589,7 +642,7 @@ const paymentController = {
     }
   },
 
-  // Générer et télécharger le reçu (PDF)
+  // GÃ©nÃ©rer et tÃ©lÃ©charger le reÃ§u (PDF)
   downloadReceipt: async (req, res) => {
     try {
       const { id } = req.params;
@@ -612,11 +665,11 @@ const paymentController = {
       });
 
       if (!payment) {
-        return res.status(404).json({ message: 'Paiement non trouvé' });
+        return res.status(404).json({ message: 'Paiement non trouvÃ©' });
       }
 
       if (req.user.role !== 'admin' && req.user.role !== 'manager' && payment.userId !== req.user.id) {
-        return res.status(403).json({ message: 'Accès refusé' });
+        return res.status(403).json({ message: 'AccÃ¨s refusÃ©' });
       }
 
       const booking = payment.booking;
@@ -628,10 +681,10 @@ const paymentController = {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=AfriRide_Receipt_${payment.id}.pdf`);
 
-      doc.fontSize(20).text('AfriRide - Reçu de paiement', { align: 'center' });
+      doc.fontSize(20).text('AfriRide - ReÃ§u de paiement', { align: 'center' });
       doc.moveDown();
 
-      doc.fontSize(12).text(`Reçu ID: ${payment.id}`);
+      doc.fontSize(12).text(`ReÃ§u ID: ${payment.id}`);
       doc.text(`Transaction ID: ${payment.transactionId || '-'}`);
       doc.text(`Statut: ${payment.status}`);
       doc.text(`Date: ${new Date(payment.createdAt).toLocaleString('fr-FR')}`);
@@ -642,12 +695,12 @@ const paymentController = {
       doc.text(user?.email || '-');
       doc.moveDown();
 
-      doc.fontSize(14).text('Véhicule', { underline: true });
+      doc.fontSize(14).text('VÃ©hicule', { underline: true });
       doc.fontSize(12).text(`${vehicle?.brand || ''} ${vehicle?.model || ''}`.trim());
-      doc.text(`Année: ${vehicle?.year || '-'}`);
+      doc.text(`AnnÃ©e: ${vehicle?.year || '-'}`);
       doc.moveDown();
 
-      doc.fontSize(14).text('Réservation', { underline: true });
+      doc.fontSize(14).text('RÃ©servation', { underline: true });
       doc.fontSize(12).text(`Du ${new Date(booking?.startDate).toLocaleDateString('fr-FR')} au ${new Date(booking?.endDate).toLocaleDateString('fr-FR')}`);
       doc.text(`Total jours: ${booking?.totalDays || '-'}`);
       doc.moveDown();
@@ -668,12 +721,12 @@ const paymentController = {
       doc.pipe(res);
       doc.end();
     } catch (error) {
-      console.error('Erreur génération reçu:', error);
-      res.status(500).json({ message: 'Erreur lors de la génération du reçu' });
+      console.error('Erreur gÃ©nÃ©ration reÃ§u:', error);
+      res.status(500).json({ message: 'Erreur lors de la gÃ©nÃ©ration du reÃ§u' });
     }
   },
 
-  // Générer un reçu PDF en buffer (pour email)
+  // GÃ©nÃ©rer un reÃ§u PDF en buffer (pour email)
   generateReceiptBuffer: async (payment, booking, vehicle, agency, user) => {
     return new Promise((resolve, reject) => {
       try {
@@ -682,10 +735,10 @@ const paymentController = {
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
 
-        doc.fontSize(20).text('AfriRide - Reçu de paiement', { align: 'center' });
+        doc.fontSize(20).text('AfriRide - ReÃ§u de paiement', { align: 'center' });
         doc.moveDown();
 
-        doc.fontSize(12).text(`Reçu ID: ${payment.id}`);
+        doc.fontSize(12).text(`ReÃ§u ID: ${payment.id}`);
         doc.text(`Transaction ID: ${payment.transactionId || '-'}`);
         doc.text(`Statut: ${payment.status}`);
         doc.text(`Date: ${new Date(payment.createdAt).toLocaleString('fr-FR')}`);
@@ -696,12 +749,12 @@ const paymentController = {
         doc.text(user?.email || '-');
         doc.moveDown();
 
-        doc.fontSize(14).text('Véhicule', { underline: true });
+        doc.fontSize(14).text('VÃ©hicule', { underline: true });
         doc.fontSize(12).text(`${vehicle?.brand || ''} ${vehicle?.model || ''}`.trim());
-        doc.text(`Année: ${vehicle?.year || '-'}`);
+        doc.text(`AnnÃ©e: ${vehicle?.year || '-'}`);
         doc.moveDown();
 
-        doc.fontSize(14).text('Réservation', { underline: true });
+        doc.fontSize(14).text('RÃ©servation', { underline: true });
         doc.fontSize(12).text(`Du ${new Date(booking?.startDate).toLocaleDateString('fr-FR')} au ${new Date(booking?.endDate).toLocaleDateString('fr-FR')}`);
         doc.text(`Total jours: ${booking?.totalDays || '-'}`);
         doc.moveDown();

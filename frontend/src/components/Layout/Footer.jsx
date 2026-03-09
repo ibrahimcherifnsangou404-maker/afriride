@@ -71,19 +71,19 @@ export function Footer() {
             <h3 className="text-white font-semibold mb-4">Légal</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="#" className="text-slate-400 hover:text-primary-400 transition-colors">
+                <Link to="/conditions-utilisation" className="text-slate-400 hover:text-primary-400 transition-colors">
                   Conditions d'utilisation
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-primary-400 transition-colors">
+                <Link to="/politique-confidentialite" className="text-slate-400 hover:text-primary-400 transition-colors">
                   Politique de confidentialité
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-slate-400 hover:text-primary-400 transition-colors">
+                <Link to="/politique-cookies" className="text-slate-400 hover:text-primary-400 transition-colors">
                   Politique de cookies
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

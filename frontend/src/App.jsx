@@ -1,7 +1,10 @@
-﻿import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+﻿import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/Navigation';
+import CookieConsentBanner from './components/CookieConsentBanner';
+import { loadCookieConsentFromServer } from './services/cookieConsentService';
 
 import HomePage from './pages/HomePage';
 import RegisterPage from './pages/RegisterPage';
@@ -20,6 +23,9 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import EmailConfirmationPage from './pages/EmailConfirmationPage';
 import MessagesPage from './pages/MessagesPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import CookiePolicyPage from './pages/CookiePolicyPage';
 
 import PaymentPage from './pages/PaymentPage';
 import InvoicesPage from './pages/InvoicesPage';
@@ -41,8 +47,12 @@ import AdminUsers from './pages/admin/AdminUsers';
 import CreateManager from './pages/admin/CreateManager';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminPromoCodes from './pages/admin/AdminPromoCodes';
+import AdminMessageReports from './pages/admin/AdminMessageReports';
 
 function App() {
+  useEffect(() => {
+    loadCookieConsentFromServer();
+  }, []);
   return (
     <AuthProvider>
       <Router>
@@ -55,6 +65,9 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/confirm-email/:token" element={<EmailConfirmationPage />} />
             <Route path="/partner-signup" element={<PartnerSignupPage />} />
+            <Route path="/conditions-utilisation" element={<TermsPage />} />
+            <Route path="/politique-confidentialite" element={<PrivacyPolicyPage />} />
+            <Route path="/politique-cookies" element={<CookiePolicyPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
             <Route path="/vehicles" element={<VehiclesPage />} />
@@ -186,9 +199,9 @@ function App() {
               }
             />
             <Route
-              path="/manager/kyc"
+              path="/admin/kyc"
               element={
-                <ProtectedRoute allowedRoles={['manager', 'admin']}>
+                <ProtectedRoute allowedRoles={['admin']}>
                   <ManagerKYC />
                 </ProtectedRoute>
               }
@@ -252,12 +265,22 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/message-reports"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminMessageReports />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/admin/promo-codes" element={<AdminPromoCodes />} />
           </Routes>
         </div>
+        <CookieConsentBanner />
       </Router>
     </AuthProvider>
   );
 }
 
 export default App;
+

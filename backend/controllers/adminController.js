@@ -1,6 +1,133 @@
-const { User, Agency, Category, Vehicle, Booking } = require('../models');
+const { User, Agency, Category, Vehicle, Booking, MessageReport, Message, Conversation } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+
+const extractCancellationReason = (notes) => {
+  const raw = String(notes || '');
+  const match = raw.match(/Raison annulation:\s*(.+)/i);
+  if (!match || !match[1]) return 'Non renseignee';
+  return match[1].trim();
+};
+
+const extractRefundAmountFromNotes = (notes) => {
+  const raw = String(notes || '');
+  const match = raw.match(/remboursement=([0-9]+(?:\.[0-9]+)?)/i);
+  if (!match || !match[1]) return 0;
+  return Number(match[1]) || 0;
+};
+
+const toCsvCell = (value) => {
+  const text = String(value ?? '');
+  const escaped = text.replace(/"/g, '""');
+  return `"${escaped}"`;
+};
+
+const buildCancellationRecords = async ({
+  startDate,
+  endDate,
+  agencyId,
+  refunded,
+  q,
+  limit = 500
+} = {}) => {
+  const where = { status: 'cancelled' };
+  if (startDate || endDate) {
+    where.updatedAt = {};
+    if (startDate) where.updatedAt[Op.gte] = new Date(startDate);
+    if (endDate) where.updatedAt[Op.lte] = new Date(endDate);
+  }
+
+  const bookings = await Booking.findAll({
+    where,
+    include: [
+      {
+        model: Vehicle,
+        as: 'vehicle',
+        attributes: ['id', 'brand', 'model', 'agencyId'],
+        include: [{ model: Agency, as: 'agency', attributes: ['id', 'name'], required: false }],
+        required: false
+      },
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'firstName', 'lastName', 'email'],
+        required: false
+      }
+    ],
+    order: [['updatedAt', 'DESC']],
+    limit: Math.min(Math.max(Number(limit) || 500, 1), 2000)
+  });
+
+  let records = bookings.map((booking) => {
+    const reason = extractCancellationReason(booking.notes);
+    const refundAmount = extractRefundAmountFromNotes(booking.notes);
+    const isRefunded = booking.paymentStatus === 'refunded' || refundAmount > 0;
+    return {
+      id: booking.id,
+      updatedAt: booking.updatedAt,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      totalPrice: Number(booking.totalPrice || 0),
+      paymentStatus: booking.paymentStatus,
+      refundAmount: Number(refundAmount || 0),
+      isRefunded,
+      reason,
+      user: booking.user ? {
+        id: booking.user.id,
+        firstName: booking.user.firstName,
+        lastName: booking.user.lastName,
+        email: booking.user.email
+      } : null,
+      vehicle: booking.vehicle ? {
+        id: booking.vehicle.id,
+        brand: booking.vehicle.brand,
+        model: booking.vehicle.model
+      } : null,
+      agency: booking.vehicle?.agency ? {
+        id: booking.vehicle.agency.id,
+        name: booking.vehicle.agency.name
+      } : null
+    };
+  });
+
+  if (agencyId) {
+    records = records.filter((item) => item.agency?.id === agencyId);
+  }
+
+  if (refunded === 'yes') {
+    records = records.filter((item) => item.isRefunded);
+  } else if (refunded === 'no') {
+    records = records.filter((item) => !item.isRefunded);
+  }
+
+  if (q && String(q).trim()) {
+    const keyword = String(q).trim().toLowerCase();
+    records = records.filter((item) => {
+      const haystack = [
+        item.reason,
+        item.user?.firstName,
+        item.user?.lastName,
+        item.user?.email,
+        item.vehicle?.brand,
+        item.vehicle?.model,
+        item.agency?.name
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(keyword);
+    });
+  }
+
+  const summary = {
+    total: records.length,
+    refundedCount: records.filter((item) => item.isRefunded).length,
+    nonRefundedCount: records.filter((item) => !item.isRefunded).length,
+    totalEstimatedRefund: records.reduce((sum, item) => sum + Number(item.refundAmount || 0), 0)
+  };
+
+  return { records, summary };
+};
 
 // @desc    Dashboard admin avec statistiques globales
 // @route   GET /api/admin/dashboard
@@ -76,6 +203,28 @@ const getDashboard = async (req, res) => {
       limit: 10
     });
 
+    const cancelledBookings = await Booking.findAll({
+      where: { status: 'cancelled' },
+      attributes: ['id', 'notes', 'paymentStatus', 'updatedAt'],
+      order: [['updatedAt', 'DESC']]
+    });
+
+    const reasonsCount = new Map();
+    let refundedCount = 0;
+    let totalEstimatedRefund = 0;
+
+    cancelledBookings.forEach((booking) => {
+      const reason = extractCancellationReason(booking.notes);
+      reasonsCount.set(reason, (reasonsCount.get(reason) || 0) + 1);
+      if (booking.paymentStatus === 'refunded') refundedCount += 1;
+      totalEstimatedRefund += extractRefundAmountFromNotes(booking.notes);
+    });
+
+    const topCancellationReasons = Array.from(reasonsCount.entries())
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
     console.log('=== STATS ADMIN ===');
     console.log('Agences:', totalAgencies);
     console.log('Véhicules:', totalVehicles);
@@ -96,7 +245,14 @@ const getDashboard = async (req, res) => {
         },
         bookingsByStatus,
         topAgencies: agenciesWithBookings,
-        recentBookings
+        recentBookings,
+        cancellationInsights: {
+          cancelledCount: cancelledBookings.length,
+          refundedCount,
+          nonRefundedCount: Math.max(0, cancelledBookings.length - refundedCount),
+          topReasons: topCancellationReasons,
+          totalEstimatedRefund
+        }
       }
     });
   } catch (error) {
@@ -502,6 +658,295 @@ const createManager = async (req, res) => {
   }
 };
 
+// @desc    Récupérer les dossiers KYC en attente
+// @route   GET /api/admin/kyc/pending
+// @access  Private (Admin)
+const getPendingKYC = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      where: { verificationStatus: 'pending' },
+      attributes: { exclude: ['password'] },
+      order: [['updatedAt', 'ASC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    console.error('Erreur récupération KYC pending (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des demandes KYC',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Approuver un dossier KYC
+// @route   PUT /api/admin/kyc/:id/approve
+// @access  Private (Admin)
+const approveKYC = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    await user.update({
+      verificationStatus: 'verified',
+      isVerified: true,
+      rejectionReason: null
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Utilisateur vérifié avec succès',
+      data: {
+        id: user.id,
+        verificationStatus: user.verificationStatus
+      }
+    });
+  } catch (error) {
+    console.error('Erreur approbation KYC (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la validation du dossier',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Rejeter un dossier KYC
+// @route   PUT /api/admin/kyc/:id/reject
+// @access  Private (Admin)
+const rejectKYC = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason || !String(reason).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le motif de rejet est requis'
+      });
+    }
+
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    await user.update({
+      verificationStatus: 'rejected',
+      isVerified: false,
+      rejectionReason: String(reason).trim()
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Dossier rejeté',
+      data: {
+        id: user.id,
+        verificationStatus: user.verificationStatus,
+        rejectionReason: user.rejectionReason
+      }
+    });
+  } catch (error) {
+    console.error('Erreur rejet KYC (admin):', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du rejet du dossier',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Récupérer les signalements de messagerie
+// @route   GET /api/admin/message-reports
+// @access  Private (Admin)
+const getMessageReports = async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query;
+    const where = {};
+    if (['pending', 'resolved', 'rejected'].includes(status)) {
+      where.status = status;
+    }
+
+    const reports = await MessageReport.findAll({
+      where,
+      include: [
+        { model: User, as: 'reporter', attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
+        { model: User, as: 'reportedUser', attributes: ['id', 'firstName', 'lastName', 'email', 'role'] },
+        { model: User, as: 'reviewer', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+        { model: Conversation, as: 'conversation', attributes: ['id', 'participantOneId', 'participantTwoId'] },
+        {
+          model: Message,
+          as: 'message',
+          attributes: ['id', 'content', 'attachmentName', 'attachmentType', 'createdAt'],
+          required: false
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      count: reports.length,
+      data: reports
+    });
+  } catch (error) {
+    console.error('Erreur récupération signalements messagerie:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des signalements',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Traiter un signalement de messagerie
+// @route   PUT /api/admin/message-reports/:id
+// @access  Private (Admin)
+const reviewMessageReport = async (req, res) => {
+  try {
+    const { status, resolutionNote } = req.body || {};
+    if (!['resolved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Statut invalide (utiliser resolved ou rejected)'
+      });
+    }
+
+    const report = await MessageReport.findByPk(req.params.id);
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Signalement introuvable'
+      });
+    }
+
+    await report.update({
+      status,
+      reviewedBy: req.user.id,
+      reviewedAt: new Date(),
+      resolutionNote: resolutionNote ? String(resolutionNote).trim() : null
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Signalement mis à jour',
+      data: report
+    });
+  } catch (error) {
+    console.error('Erreur traitement signalement messagerie:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du traitement du signalement',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Lister les annulations de reservations
+// @route   GET /api/admin/cancellations
+// @access  Private (Admin)
+const getCancellations = async (req, res) => {
+  try {
+    const { startDate, endDate, agencyId, refunded, q, limit } = req.query;
+    const { records, summary } = await buildCancellationRecords({
+      startDate,
+      endDate,
+      agencyId,
+      refunded,
+      q,
+      limit
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: records.length,
+      summary,
+      data: records
+    });
+  } catch (error) {
+    console.error('Erreur recuperation annulations:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la recuperation des annulations',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Export CSV des annulations
+// @route   GET /api/admin/cancellations/export
+// @access  Private (Admin)
+const exportCancellationsCsv = async (req, res) => {
+  try {
+    const { startDate, endDate, agencyId, refunded, q, limit } = req.query;
+    const { records } = await buildCancellationRecords({
+      startDate,
+      endDate,
+      agencyId,
+      refunded,
+      q,
+      limit
+    });
+
+    const headers = [
+      'ID',
+      'Date annulation',
+      'Date debut',
+      'Date fin',
+      'Client',
+      'Email client',
+      'Agence',
+      'Vehicule',
+      'Montant reservation',
+      'Rembourse',
+      'Montant remboursement',
+      'Raison'
+    ];
+
+    const lines = [
+      headers.map(toCsvCell).join(';'),
+      ...records.map((item) => ([
+        item.id,
+        item.updatedAt ? new Date(item.updatedAt).toISOString() : '',
+        item.startDate || '',
+        item.endDate || '',
+        `${item.user?.firstName || ''} ${item.user?.lastName || ''}`.trim(),
+        item.user?.email || '',
+        item.agency?.name || '',
+        `${item.vehicle?.brand || ''} ${item.vehicle?.model || ''}`.trim(),
+        item.totalPrice,
+        item.isRefunded ? 'oui' : 'non',
+        item.refundAmount,
+        item.reason
+      ]).map(toCsvCell).join(';'))
+    ];
+
+    const csv = lines.join('\n');
+    const dateTag = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=annulations_${dateTag}.csv`);
+    return res.status(200).send(`\uFEFF${csv}`);
+  } catch (error) {
+    console.error('Erreur export annulations CSV:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l export CSV',
+      error: error.message
+    });
+  }
+};
+
 // N'oublie pas d'exporter la fonction
 module.exports = {
   getDashboard,
@@ -514,5 +959,12 @@ module.exports = {
   updateCategory,
   deleteCategory,
   getAllUsers,
-  createManager // Ajoute ceci
+  createManager,
+  getPendingKYC,
+  approveKYC,
+  rejectKYC,
+  getMessageReports,
+  reviewMessageReport,
+  getCancellations,
+  exportCancellationsCsv
 };

@@ -53,5 +53,32 @@ export const adminService = {
   getAllUsers: async () => {
     const response = await api.get('/admin/users');
     return response.data;
+  },
+
+  // KYC
+  getPendingKYC: async () => {
+    const response = await api.get('/admin/kyc/pending');
+    return response.data;
+  },
+
+  approveKYC: async (userId) => {
+    const response = await api.put(`/admin/kyc/${userId}/approve`);
+    return response.data;
+  },
+
+  rejectKYC: async (userId, reason) => {
+    const response = await api.put(`/admin/kyc/${userId}/reject`, { reason });
+    return response.data;
+  },
+
+  // Signalements messagerie
+  getMessageReports: async (status = 'pending') => {
+    const response = await api.get('/admin/message-reports', { params: { status } });
+    return response.data;
+  },
+
+  reviewMessageReport: async (reportId, payload) => {
+    const response = await api.put(`/admin/message-reports/${reportId}`, payload);
+    return response.data;
   }
 };

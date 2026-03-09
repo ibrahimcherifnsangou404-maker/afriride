@@ -19,6 +19,7 @@ function PaymentPage() {
     const [success, setSuccess] = useState(false);
     const [paymentId, setPaymentId] = useState('');
     const [selectedMethod, setSelectedMethod] = useState('');
+    const [requiresKyc, setRequiresKyc] = useState(false);
 
     // Form State
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -42,6 +43,7 @@ function PaymentPage() {
     const handlePayment = async (e) => {
         e.preventDefault();
         setError('');
+        setRequiresKyc(false);
 
         if (!selectedMethod) {
             setError('Veuillez choisir un mode de paiement');
@@ -82,6 +84,7 @@ function PaymentPage() {
             }
         } catch (err) {
             console.error(err);
+            setRequiresKyc(err.response?.data?.errorCode === 'KYC_REQUIRED');
             setError(err.response?.data?.message || 'Erreur lors du paiement');
         } finally {
             setProcessing(false);
@@ -244,6 +247,17 @@ function PaymentPage() {
                                                 <AlertCircle className="w-5 h-5" />
                                                 {error}
                                             </div>
+                                        )}
+
+                                        {requiresKyc && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="w-full mt-3"
+                                                onClick={() => navigate('/kyc')}
+                                            >
+                                                Completer mon KYC
+                                            </Button>
                                         )}
 
                                         <Button

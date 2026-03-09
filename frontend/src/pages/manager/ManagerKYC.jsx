@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Clock, User, Download, ExternalLink } from 'lucide-react';
-import { managerService } from '../../services/managerService';
+import { adminService } from '../../services/adminService';
 import { Card, Button, Badge, Loading } from '../../components/UI';
 import { Modal } from '../../components/Modal';
 import { API_BASE_URL } from '../../services/api';
@@ -21,7 +21,7 @@ function ManagerKYC() {
     const loadPendingKYC = async () => {
         try {
             setLoading(true);
-            const response = await managerService.getPendingKYC();
+            const response = await adminService.getPendingKYC();
             setUsers(response.data);
         } catch (err) {
             console.error('Erreur chargement KYC:', err);
@@ -34,7 +34,7 @@ function ManagerKYC() {
         if (!window.confirm('Voulez-vous approuver ce dossier ?')) return;
         try {
             setActionLoading(true);
-            await managerService.approveKYC(userId);
+            await adminService.approveKYC(userId);
             setIsModalOpen(false);
             loadPendingKYC();
         } catch (err) {
@@ -48,7 +48,7 @@ function ManagerKYC() {
         if (!rejectReason.trim()) return;
         try {
             setActionLoading(true);
-            await managerService.rejectKYC(selectedUser.id, rejectReason);
+            await adminService.rejectKYC(selectedUser.id, rejectReason);
             setIsRejectModalOpen(false);
             setIsModalOpen(false);
             setRejectReason('');

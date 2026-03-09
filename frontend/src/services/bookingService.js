@@ -33,9 +33,15 @@ export const bookingService = {
     return response.data;
   },
 
+  // Obtenir un aperçu de la politique d'annulation (taux + remboursement)
+  getCancellationPreview: async (id) => {
+    const response = await api.get(`/bookings/${id}/cancellation-preview`);
+    return response.data;
+  },
+
   // Annuler une réservation
-  cancelBooking: async (id) => {
-    const response = await api.put(`/bookings/${id}/cancel`);
+  cancelBooking: async (id, payload = {}) => {
+    const response = await api.put(`/bookings/${id}/cancel`, payload);
     return response.data;
   },
 

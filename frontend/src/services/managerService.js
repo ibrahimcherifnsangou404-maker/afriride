@@ -92,19 +92,4 @@ export const managerService = {
     return response.data;
   },
 
-  // KYC Management
-  getPendingKYC: async () => {
-    const response = await api.get('/manager/kyc/pending');
-    return response.data;
-  },
-
-  approveKYC: async (userId) => {
-    const response = await api.put(`/manager/kyc/${userId}/approve`);
-    return response.data;
-  },
-
-  rejectKYC: async (userId, reason) => {
-    const response = await api.put(`/manager/kyc/${userId}/reject`, { reason });
-    return response.data;
-  }
 };

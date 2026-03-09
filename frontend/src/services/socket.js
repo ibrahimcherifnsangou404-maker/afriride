@@ -12,7 +12,10 @@ export const connectSocket = (token) => {
   }
 
   socketInstance = io(API_BASE_URL, {
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 500,
     auth: {
       token
     }
