@@ -428,18 +428,18 @@ function AdminDashboard() {
                                 <Car className="w-5 h-5 text-primary-600" />
                               </div>
                               <div className="font-semibold text-slate-900">
-                                {booking.vehicle.brand} {booking.vehicle.model}
+                                {booking.vehicle?.brand || 'Vehicule'} {booking.vehicle?.model || ''}
                               </div>
                             </div>
-                            <div className="text-xs text-slate-600 mt-1">{booking.vehicle.year}</div>
+                            <div className="text-xs text-slate-600 mt-1">{booking.vehicle?.year || '-'}</div>
                           </td>
 
                           {/* Client */}
                           <td className="px-6 py-4">
                             <div className="font-semibold text-slate-900">
-                              {booking.user.firstName} {booking.user.lastName}
+                              {booking.user?.firstName || 'Utilisateur'} {booking.user?.lastName || ''}
                             </div>
-                            <div className="text-xs text-slate-600 mt-1">{booking.user.email}</div>
+                            <div className="text-xs text-slate-600 mt-1">{booking.user?.email || '-'}</div>
                           </td>
 
                           {/* Agency */}
