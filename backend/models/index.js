@@ -14,6 +14,8 @@ const Favorite = require('./Favorite');
 const Conversation = require('./Conversation');
 const Message = require('./Message');
 const BookingApproval = require('./BookingApproval');
+const MessageReport = require('./MessageReport');
+const UserBlock = require('./UserBlock');
 
 // Définir les relations entre les modèles
 
@@ -91,7 +93,7 @@ Contract.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 Agency.hasMany(Contract, { foreignKey: 'agency_id', as: 'contracts' });
 Contract.belongsTo(Agency, { foreignKey: 'agency_id', as: 'agency' });
 
-// Favorite associations (NEW)
+// Favorite associations
 User.hasMany(Favorite, { foreignKey: 'user_id', as: 'favorites' });
 Favorite.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
@@ -110,6 +112,29 @@ Message.belongsTo(Conversation, { foreignKey: 'conversation_id', as: 'conversati
 User.hasMany(Message, { foreignKey: 'sender_id', as: 'sentMessages' });
 Message.belongsTo(User, { foreignKey: 'sender_id', as: 'sender' });
 
+// MessageReport associations
+User.hasMany(MessageReport, { foreignKey: 'reporter_id', as: 'reportedMessages' });
+MessageReport.belongsTo(User, { foreignKey: 'reporter_id', as: 'reporter' });
+
+User.hasMany(MessageReport, { foreignKey: 'reported_user_id', as: 'messageReportsAgainstUser' });
+MessageReport.belongsTo(User, { foreignKey: 'reported_user_id', as: 'reportedUser' });
+
+User.hasMany(MessageReport, { foreignKey: 'reviewed_by', as: 'reviewedMessageReports' });
+MessageReport.belongsTo(User, { foreignKey: 'reviewed_by', as: 'reviewer' });
+
+Conversation.hasMany(MessageReport, { foreignKey: 'conversation_id', as: 'reports' });
+MessageReport.belongsTo(Conversation, { foreignKey: 'conversation_id', as: 'conversation' });
+
+Message.hasMany(MessageReport, { foreignKey: 'message_id', as: 'reports' });
+MessageReport.belongsTo(Message, { foreignKey: 'message_id', as: 'message' });
+
+// UserBlock associations
+User.hasMany(UserBlock, { foreignKey: 'blocker_id', as: 'blocksInitiated' });
+UserBlock.belongsTo(User, { foreignKey: 'blocker_id', as: 'blocker' });
+
+User.hasMany(UserBlock, { foreignKey: 'blocked_id', as: 'blocksReceived' });
+UserBlock.belongsTo(User, { foreignKey: 'blocked_id', as: 'blocked' });
+
 // BookingApproval associations
 Booking.hasMany(BookingApproval, { foreignKey: 'booking_id', as: 'approvals' });
 BookingApproval.belongsTo(Booking, { foreignKey: 'booking_id', as: 'booking' });
@@ -125,22 +150,33 @@ const syncDatabase = async () => {
   try {
     console.log('🔄 Synchronisation de la base de données...');
 
-    // Synchroniser tous les modèles avec sync()
+    // ✅ ORDRE CORRECT : tables sans dépendances en premier !
+    // Niveau 1 - tables de base (sans foreign keys vers d'autres tables custom)
+    await Agency.sync({ alter: true });
+    await Category.sync({ alter: true });
+    await PromoCode.sync({ alter: true });
+
+    // Niveau 2 - tables qui dépendent du niveau 1
     await User.sync({ alter: true });
-    await Agency.sync({ alter: false });
-    await Category.sync({ alter: false });
-    await Vehicle.sync({ alter: false });
-    await PromoCode.sync({ alter: false });
-    await Booking.sync({ alter: false });
-    await Payment.sync({ alter: false });
-    await Review.sync({ alter: false });
-    await LoyaltyPoint.sync({ alter: false });
-    await PromoCodeUsage.sync({ alter: false });
-    await Contract.sync({ alter: false });
+    await Vehicle.sync({ alter: true });
+
+    // Niveau 3 - tables qui dépendent du niveau 2
+    await Booking.sync({ alter: true });
     await Favorite.sync({ alter: true });
     await Conversation.sync({ alter: true });
+
+    // Niveau 4 - tables qui dépendent du niveau 3
+    await Payment.sync({ alter: true });
+    await Review.sync({ alter: true });
+    await LoyaltyPoint.sync({ alter: true });
+    await PromoCodeUsage.sync({ alter: true });
     await Message.sync({ alter: true });
     await BookingApproval.sync({ alter: true });
+
+    // Niveau 5 - tables qui dépendent du niveau 4
+    await Contract.sync({ alter: true });
+    await MessageReport.sync({ alter: true });
+    await UserBlock.sync({ alter: true });
 
     console.log('✅ Base de données synchronisée !');
   } catch (error) {
@@ -166,5 +202,7 @@ module.exports = {
   Conversation,
   Message,
   BookingApproval,
+  MessageReport,
+  UserBlock,
   syncDatabase
 };
