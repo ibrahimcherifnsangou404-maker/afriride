@@ -166,7 +166,7 @@ export default function ManagerBookings() {
         <div className="fixed top-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
           {toasts.map((t) => (
             <div key={t.id} className="pointer-events-auto">
-              <Toast message={t.message} type={t.type} onClose={() => { }} />
+              <Toast message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
             </div>
           ))}
         </div>

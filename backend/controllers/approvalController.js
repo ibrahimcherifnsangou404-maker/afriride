@@ -10,10 +10,12 @@ const approvalController = {
       const bookingInclude = {
         model: Booking,
         as: 'booking',
+        required: true,
         attributes: ['id', 'startDate', 'endDate', 'totalPrice', 'status', 'paymentStatus', 'createdAt'],
         include: [{
           model: Vehicle,
           as: 'vehicle',
+          required: true,
           attributes: ['id', 'brand', 'model', 'year', 'agencyId'],
           include: [{ model: Agency, as: 'agency', attributes: ['id', 'name'] }],
           ...(req.user.role === 'manager' ? { where: { agencyId: req.user.agencyId } } : {})
