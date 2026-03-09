@@ -4,13 +4,13 @@ const dotenv = require('dotenv');
 const http = require('http');
 const path = require('path');
 const multer = require('multer');
-const { syncDatabase } = require('./models');
-const { initSocket } = require('./socket');
-
 // Charger les variables d'environnement (seulement en local)
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: path.join(__dirname, '.env') });
 }
+
+const { syncDatabase } = require('./models');
+const { initSocket } = require('./socket');
 
 const app = express();
 const server = http.createServer(app);
