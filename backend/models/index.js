@@ -150,33 +150,32 @@ const syncDatabase = async () => {
   try {
     console.log('🔄 Synchronisation de la base de données...');
 
-    // ✅ ORDRE CORRECT : tables sans dépendances en premier !
     // Niveau 1 - tables de base (sans foreign keys vers d'autres tables custom)
-    await Agency.sync({ alter: true });
-    await Category.sync({ alter: true });
-    await PromoCode.sync({ alter: true });
+    await Agency.sync({ alter: false });
+    await Category.sync({ alter: false });
+    await PromoCode.sync({ alter: false });
 
     // Niveau 2 - tables qui dépendent du niveau 1
-    await User.sync({ alter: true });
-    await Vehicle.sync({ alter: true });
+    await User.sync({ alter: false });
+    await Vehicle.sync({ alter: false });
 
     // Niveau 3 - tables qui dépendent du niveau 2
-    await Booking.sync({ alter: true });
-    await Favorite.sync({ alter: true });
-    await Conversation.sync({ alter: true });
+    await Booking.sync({ alter: false });
+    await Favorite.sync({ alter: false });
+    await Conversation.sync({ alter: false });
 
     // Niveau 4 - tables qui dépendent du niveau 3
-    await Payment.sync({ alter: true });
-    await Review.sync({ alter: true });
-    await LoyaltyPoint.sync({ alter: true });
-    await PromoCodeUsage.sync({ alter: true });
-    await Message.sync({ alter: true });
-    await BookingApproval.sync({ alter: true });
+    await Payment.sync({ alter: false });
+    await Review.sync({ alter: false });
+    await LoyaltyPoint.sync({ alter: false });
+    await PromoCodeUsage.sync({ alter: false });
+    await Message.sync({ alter: false });
+    await BookingApproval.sync({ alter: false });
 
     // Niveau 5 - tables qui dépendent du niveau 4
-    await Contract.sync({ alter: true });
-    await MessageReport.sync({ alter: true });
-    await UserBlock.sync({ alter: true });
+    await Contract.sync({ alter: false });
+    await MessageReport.sync({ alter: false });
+    await UserBlock.sync({ alter: false });
 
     console.log('✅ Base de données synchronisée !');
   } catch (error) {
