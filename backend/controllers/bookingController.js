@@ -93,6 +93,26 @@ const createBooking = async (req, res) => {
     const { vehicleId, startDate, endDate, notes } = req.body;
     const userId = req.user.id;
 
+    const currentUser = await User.findByPk(userId, {
+      attributes: ['id', 'role', 'verificationStatus']
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouve'
+      });
+    }
+
+    if (currentUser.role === 'client' && currentUser.verificationStatus !== 'verified') {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'KYC_REQUIRED',
+        message: 'Votre identite doit etre verifiee avant de reserver un vehicule.',
+        action: { label: 'Completer le KYC', path: '/kyc' }
+      });
+    }
+
     // Vérifier que tous les champs sont remplis
     if (!vehicleId || !startDate || !endDate) {
       return res.status(400).json({

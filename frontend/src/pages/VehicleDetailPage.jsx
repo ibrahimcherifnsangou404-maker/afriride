@@ -18,7 +18,7 @@ import { API_BASE_URL } from '../services/api';
 function VehicleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, user } = useContext(AuthContext);
 
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +40,7 @@ function VehicleDetailPage() {
 
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [requiresKyc, setRequiresKyc] = useState(false);
 
   // États pour le code promo
   const [promoCode, setPromoCode] = useState('');
@@ -255,9 +256,16 @@ function VehicleDetailPage() {
 
   const handleBooking = async () => {
     setBookingError('');
+    setRequiresKyc(false);
 
     if (!isAuthenticated) {
       navigate('/login', { state: { from: `/vehicles/${id}` } });
+      return;
+    }
+
+    if (user?.role === 'client' && user?.verificationStatus !== 'verified') {
+      setBookingError('Votre identite doit etre verifiee avant de reserver un vehicule.');
+      setRequiresKyc(true);
       return;
     }
 
@@ -298,6 +306,9 @@ function VehicleDetailPage() {
       }
     } catch (error) {
       console.error('Erreur réservation:', error);
+      if (error.response?.data?.errorCode === 'KYC_REQUIRED') {
+        setRequiresKyc(true);
+      }
       setBookingError(error.response?.data?.message || 'Erreur lors de la reservation');
     } finally {
       setBookingLoading(false);
@@ -726,6 +737,15 @@ function VehicleDetailPage() {
                   <div role="alert" className="mb-6 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 font-medium">
                     {bookingError}
                   </div>
+                )}
+                {requiresKyc && (
+                  <Button
+                    variant="outline"
+                    className="w-full mb-6"
+                    onClick={() => navigate('/kyc')}
+                  >
+                    Completer ma verification
+                  </Button>
                 )}
 
                 {/* Promo Code */}
