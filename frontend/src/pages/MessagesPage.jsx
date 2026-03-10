@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, Ban, MessageCircle, Mic, MoreVertical, Paperclip, Search, Send, SlidersHorizontal, Square, Star, Trash2, UserRound, X } from 'lucide-react';
+import { AlertTriangle, Archive, Ban, MessageCircle, Mic, MoreVertical, Paperclip, Search, Send, SlidersHorizontal, Square, Star, Trash2, UserRound, X, ArrowLeft } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Card, EmptyState, Loading } from '../components/UI';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -752,7 +752,12 @@ function MessagesPage() {
           <Card className="p-10"><Loading /></Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <Card className="lg:col-span-4 p-4 md:p-5 h-[75vh] overflow-hidden flex flex-col" hover={false}>
+            <Card
+              className={`lg:col-span-4 p-4 md:p-5 h-[70vh] lg:h-[75vh] overflow-hidden flex flex-col ${
+                activeConversationId ? 'hidden lg:flex' : 'flex'
+              }`}
+              hover={false}
+            >
               <div className="mb-4">
                 <label htmlFor="contact-search" className="text-sm font-semibold text-slate-700">Demarrer une conversation</label>
                 <div className="relative mt-2">
@@ -833,7 +838,12 @@ function MessagesPage() {
               </div>
             </Card>
 
-            <Card className="lg:col-span-8 p-0 h-[75vh] overflow-hidden flex flex-col" hover={false}>
+            <Card
+              className={`lg:col-span-8 p-0 h-[70vh] lg:h-[75vh] overflow-hidden flex flex-col ${
+                activeConversationId ? 'flex' : 'hidden lg:flex'
+              }`}
+              hover={false}
+            >
               {!activeConversation ? (
                 <div className="h-full flex items-center justify-center p-8">
                   <EmptyState icon={MessageCircle} title="Selectionnez une conversation" message="Choisissez un contact ou une conversation existante pour demarrer." />
@@ -843,6 +853,14 @@ function MessagesPage() {
                   <div className="px-5 py-4 border-b border-slate-200 bg-white">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setActiveConversationId('')}
+                        className="lg:hidden h-9 w-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center justify-center text-slate-600"
+                        aria-label="Retour aux conversations"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
                       <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><UserRound className="w-5 h-5" /></div>
                       <div>
                         <p className="font-semibold text-slate-900">{safeText(activeConversation.otherParticipant?.firstName)} {safeText(activeConversation.otherParticipant?.lastName)}</p>
