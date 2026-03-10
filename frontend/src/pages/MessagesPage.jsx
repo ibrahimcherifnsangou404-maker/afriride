@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Archive, Ban, MessageCircle, Mic, MoreVertical, Paperclip, Search, Send, SlidersHorizontal, Square, Star, Trash2, UserRound, X, ArrowLeft, Plus, Camera } from 'lucide-react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Archive, Ban, MessageCircle, Mic, MoreVertical, Paperclip, Search, Send, SlidersHorizontal, Square, Star, Trash2, UserRound, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Card, EmptyState, Loading } from '../components/UI';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -65,7 +65,6 @@ function MessagesPage() {
   const [messageDateFrom, setMessageDateFrom] = useState('');
   const [messageDateTo, setMessageDateTo] = useState('');
   const [showMessageFilters, setShowMessageFilters] = useState(false);
-  const [showContactsPanel, setShowContactsPanel] = useState(false);
   const [blockedUserIds, setBlockedUserIds] = useState([]);
   const [conversationFilter, setConversationFilter] = useState(searchParams.get('filter') === 'unread' ? 'unread' : 'all');
   const [typingByConversation, setTypingByConversation] = useState({});
@@ -732,11 +731,11 @@ function MessagesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 py-6 text-slate-100 notranslate" translate="no">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mb-6 hidden lg:block">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-100">Messagerie interne</h1>
-          <p className="mt-2 text-slate-400">Echangez directement entre clients, agences et administration.</p>
+    <div className="min-h-screen bg-slate-50 py-10 notranslate" translate="no">
+      <div className="container mx-auto max-w-7xl px-6">
+        <div className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Messagerie interne</h1>
+          <p className="mt-2 text-slate-600">Echangez directement entre clients, agences et administration.</p>
         </div>
 
         {incomingNotice && (
@@ -753,60 +752,47 @@ function MessagesPage() {
           <Card className="p-10"><Loading /></Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <Card
-              className={`lg:col-span-4 p-4 md:p-5 h-[75vh] lg:h-[75vh] overflow-hidden flex flex-col bg-slate-950 border border-slate-900 ${
-                activeConversationId ? 'hidden lg:flex' : 'flex'
-              }`}
-              hover={false}
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">WhatsApp</h2>
-                  <p className="text-xs text-slate-400">Messagerie AfriRide</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" className="h-9 w-9 rounded-full border border-slate-800 bg-slate-900 inline-flex items-center justify-center text-slate-200 hover:bg-slate-800" aria-label="Camera">
-                    <Camera className="w-4 h-4" />
-                  </button>
-                  <button type="button" className="h-9 w-9 rounded-full border border-slate-800 bg-slate-900 inline-flex items-center justify-center text-slate-200 hover:bg-slate-800" aria-label="Plus d options">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+            <Card className="lg:col-span-4 p-4 md:p-5 h-[75vh] overflow-hidden flex flex-col" hover={false}>
+              <div className="mb-4">
+                <label htmlFor="contact-search" className="text-sm font-semibold text-slate-700">Demarrer une conversation</label>
+                <div className="relative mt-2">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input id="contact-search" type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Rechercher un contact..." className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                 </div>
               </div>
 
               <div className="mb-4">
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={conversationSearch}
-                    onChange={(e) => setConversationSearch(e.target.value)}
-                    placeholder="Demander a Meta AI ou rechercher"
-                    className="w-full rounded-full border border-slate-800 bg-slate-900 pl-10 pr-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Contacts</p>
+                <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                  {contacts.length === 0 && (<p className="text-sm text-slate-500">Aucun contact trouve</p>)}
+                  {contacts.map((contact) => (
+                    <button key={contact.id} type="button" onClick={() => handleStartConversation(contact.id)} className="w-full text-left px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50">
+                      <p className="text-sm font-semibold text-slate-900">{contact.firstName} {contact.lastName}</p>
+                      <p className="text-xs text-slate-600">{contact.role}{contact.agency?.name ? ` - ${contact.agency.name}` : ''}</p>
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="min-h-0 flex-1">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversations</p>
-                  <span className="text-xs font-semibold text-slate-500">{totalUnread} non lu(s)</span>
+                  <span className="text-xs font-semibold text-slate-600">{totalUnread} non lu(s)</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setConversationFilter((prev) => (prev === 'archived' ? 'all' : 'archived'))}
-                  className="w-full mb-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
-                >
-                  <div className="inline-flex items-center gap-2">
-                    <Archive className="w-4 h-4 text-slate-400" />
-                    Archivees
+                <div className="mb-3 space-y-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input type="text" value={conversationSearch} onChange={(e) => setConversationSearch(e.target.value)} placeholder="Rechercher une conversation..." className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
-                  <span className="text-xs text-slate-400">
-                    {archivedConversationIds.length || 0}
-                  </span>
-                </button>
-                <div className="space-y-1.5 h-full overflow-y-auto pr-1">
+                  <div className="flex gap-2">
+                    {['all', 'unread', 'pinned', 'archived'].map((value) => (
+                      <button key={value} type="button" onClick={() => setConversationFilter(value)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${conversationFilter === value ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                        {value === 'all' ? 'Toutes' : value === 'unread' ? 'Non lues' : value === 'pinned' ? 'Epinglees' : 'Archivees'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2 h-full overflow-y-auto pr-1">
                   {filteredConversations.length === 0 ? (
                     <p className="text-sm text-slate-500">Aucune conversation</p>
                   ) : filteredConversations.map((conversation) => (
@@ -821,50 +807,33 @@ function MessagesPage() {
                           setActiveConversationId(conversation.id);
                         }
                       }}
-                      className={`w-full text-left px-3 py-3 rounded-2xl border transition-colors cursor-pointer ${
-                        activeConversationId === conversation.id
-                          ? 'border-emerald-500/60 bg-emerald-500/10'
-                          : 'border-slate-900 bg-slate-900 hover:bg-slate-800'
-                      }`}
+                      className={`w-full text-left px-3 py-3 rounded-xl border transition-colors cursor-pointer ${activeConversationId === conversation.id ? 'border-primary-300 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                             {safeText(conversation.otherParticipant?.firstName)} {safeText(conversation.otherParticipant?.lastName)}
                             <span className={`inline-flex w-2 h-2 rounded-full ${conversation.otherParticipant?.isOnline ? 'bg-green-500' : 'bg-slate-300'}`} />
                           </p>
-                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{safeText(conversation.lastMessage?.content) || (conversation.lastMessage?.hasAttachment ? 'Piece jointe' : 'Conversation creee')}</p>
+                          <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">{safeText(conversation.lastMessage?.content) || (conversation.lastMessage?.hasAttachment ? 'Piece jointe' : 'Conversation creee')}</p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button type="button" onClick={(e) => { e.stopPropagation(); togglePinConversation(conversation.id); }} className="p-1 rounded-md hover:bg-slate-800" aria-label="Epingler la conversation">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); togglePinConversation(conversation.id); }} className="p-1 rounded-md hover:bg-slate-100" aria-label="Epingler la conversation">
                             <Star className={`w-4 h-4 ${pinnedConversationIds.includes(conversation.id) ? 'text-amber-500 fill-current' : 'text-slate-400'}`} />
                           </button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); toggleArchiveConversation(conversation.id); }} className="p-1 rounded-md hover:bg-slate-800" aria-label="Archiver la conversation">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); toggleArchiveConversation(conversation.id); }} className="p-1 rounded-md hover:bg-slate-100" aria-label="Archiver la conversation">
                             <Archive className={`w-4 h-4 ${archivedConversationIds.includes(conversation.id) ? 'text-blue-600' : 'text-slate-400'}`} />
                           </button>
-                          {conversation.unreadCount > 0 && (<span className="min-w-6 h-6 px-1 rounded-full bg-emerald-500 text-slate-950 text-xs font-semibold inline-flex items-center justify-center">{conversation.unreadCount}</span>)}
+                          {conversation.unreadCount > 0 && (<span className="min-w-6 h-6 px-1 rounded-full bg-primary-600 text-white text-xs font-semibold inline-flex items-center justify-center">{conversation.unreadCount}</span>)}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowContactsPanel(true)}
-                className="fixed lg:static bottom-6 right-6 lg:bottom-auto lg:right-auto h-14 w-14 rounded-2xl bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/30 inline-flex items-center justify-center lg:self-end"
-                aria-label="Nouveau contact"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
             </Card>
 
-            <Card
-              className={`lg:col-span-8 p-0 h-[75vh] lg:h-[75vh] overflow-hidden flex flex-col ${
-                activeConversationId ? 'flex' : 'hidden lg:flex'
-              }`}
-              hover={false}
-            >
+            <Card className="lg:col-span-8 p-0 h-[75vh] overflow-hidden flex flex-col" hover={false}>
               {!activeConversation ? (
                 <div className="h-full flex items-center justify-center p-8">
                   <EmptyState icon={MessageCircle} title="Selectionnez une conversation" message="Choisissez un contact ou une conversation existante pour demarrer." />
@@ -874,14 +843,6 @@ function MessagesPage() {
                   <div className="px-5 py-4 border-b border-slate-200 bg-white">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setActiveConversationId('')}
-                        className="lg:hidden h-9 w-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 inline-flex items-center justify-center text-slate-600"
-                        aria-label="Retour aux conversations"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                      </button>
                       <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center"><UserRound className="w-5 h-5" /></div>
                       <div>
                         <p className="font-semibold text-slate-900">{safeText(activeConversation.otherParticipant?.firstName)} {safeText(activeConversation.otherParticipant?.lastName)}</p>
@@ -1191,61 +1152,6 @@ function MessagesPage() {
                 </>
               )}
             </Card>
-          </div>
-        )}
-        {showContactsPanel && (
-          <div className="fixed inset-0 z-50">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/60"
-              onClick={() => setShowContactsPanel(false)}
-              aria-label="Fermer"
-            />
-            <div className="absolute bottom-0 left-0 right-0 max-h-[80vh] rounded-t-3xl border border-slate-800 bg-slate-950 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-200">Nouveau message</p>
-                  <p className="text-xs text-slate-500">Choisir un contact</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowContactsPanel(false)}
-                  className="h-9 w-9 rounded-full border border-slate-800 bg-slate-900 inline-flex items-center justify-center text-slate-200 hover:bg-slate-800"
-                  aria-label="Fermer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="relative mb-3">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Rechercher un contact..."
-                  className="w-full rounded-full border border-slate-800 bg-slate-900 pl-10 pr-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
-                {contacts.length === 0 && (
-                  <p className="text-sm text-slate-500">Aucun contact trouve</p>
-                )}
-                {contacts.map((contact) => (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => {
-                      handleStartConversation(contact.id);
-                      setShowContactsPanel(false);
-                    }}
-                    className="w-full text-left px-3 py-3 rounded-2xl border border-slate-800 bg-slate-900 hover:bg-slate-800"
-                  >
-                    <p className="text-sm font-semibold text-slate-100">{contact.firstName} {contact.lastName}</p>
-                    <p className="text-xs text-slate-400">{contact.role}{contact.agency?.name ? ` - ${contact.agency.name}` : ''}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
       </div>
