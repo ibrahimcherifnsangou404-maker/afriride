@@ -1,8 +1,9 @@
-ï»¿import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Car, Building2, Plus, Edit, Trash2, Phone, Mail, MapPin } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { AuthContext } from '../../context/AuthContext';
+import { Skeleton } from '../../components/UI';
 import ConfirmModal from '../../components/ConfirmModal';
 
 function AdminAgencies() {
@@ -62,7 +63,7 @@ function AdminAgencies() {
   };
 
   const handleOpenModal = (agency = null) => {
-    // Seulement modifier les agences existantes, pas crÃ©er de nouvelles
+    // Seulement modifier les agences existantes, pas créer de nouvelles
     if (agency) {
       setEditingAgency(agency);
       setFormData({
@@ -93,16 +94,16 @@ function AdminAgencies() {
     try {
       if (editingAgency) {
         await adminService.updateAgency(editingAgency.id, formData);
-        alert('Agence mise Ã  jour avec succÃ¨s');
+        alert('Agence mise à jour avec succès');
       } else {
         await adminService.createAgency(formData);
-        alert('Agence crÃ©Ã©e avec succÃ¨s');
+        alert('Agence créée avec succès');
       }
       loadAgencies();
       handleCloseModal();
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Erreur lors de l\'opÃ©ration');
+      alert(error.response?.data?.message || 'Erreur lors de l\'opération');
     }
   };
 
@@ -120,7 +121,7 @@ function AdminAgencies() {
       await adminService.deleteAgency(deleteModal.agencyId);
       loadAgencies();
       setDeleteModal({ isOpen: false, agencyId: null, agencyName: '' });
-      alert('Agence supprimÃ©e avec succÃ¨s');
+      alert('Agence supprimée avec succès');
     } catch (error) {
       console.error('Erreur suppression:', error);
       alert(error.response?.data?.message || 'Erreur lors de la suppression');
@@ -136,15 +137,21 @@ function AdminAgencies() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des agences</h1>
-            <p className="text-gray-600">GÃ©rez toutes les agences partenaires</p>
-            <p className="text-sm text-gray-500 mt-2">Les nouvelles agences sont crÃ©Ã©es via "Devenir Partenaire"</p>
+            <p className="text-gray-600">Gérez toutes les agences partenaires</p>
+            <p className="text-sm text-gray-500 mt-2">Les nouvelles agences sont créées via "Devenir Partenaire"</p>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary mx-auto"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="bg-white rounded-lg shadow-lg p-6 space-y-3">
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -191,7 +198,7 @@ function AdminAgencies() {
 
                 <div className="flex items-center justify-between pt-4 border-t">
                   <div className="text-sm text-gray-600">
-                    <span className="font-semibold">{agency.vehicles?.length || 0}</span> vÃ©hicules
+                    <span className="font-semibold">{agency.vehicles?.length || 0}</span> véhicules
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -263,7 +270,7 @@ function AdminAgencies() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    TÃ©lÃ©phone *
+                    Téléphone *
                   </label>
                   <input
                     type="tel"
@@ -292,7 +299,7 @@ function AdminAgencies() {
                     type="submit"
                     className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-green-600 font-semibold"
                   >
-                    Mettre Ã  jour
+                    Mettre à jour
                   </button>
                   <button
                     type="button"
@@ -314,7 +321,7 @@ function AdminAgencies() {
         onClose={() => setDeleteModal({ isOpen: false, agencyId: null, agencyName: '' })}
         onConfirm={handleDeleteConfirm}
         title="Supprimer l'agence"
-        message={`ÃŠtes-vous sÃ»r de vouloir supprimer "${deleteModal.agencyName}" ? Cette action est irrÃ©versible.`}
+        message={`Êtes-vous sûr de vouloir supprimer "${deleteModal.agencyName}" ? Cette action est irréversible.`}
         loading={deleting}
       />
     </div>
@@ -322,5 +329,6 @@ function AdminAgencies() {
 }
 
 export default AdminAgencies;
+
 
 

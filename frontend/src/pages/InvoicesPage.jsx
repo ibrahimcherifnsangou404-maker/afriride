@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { paymentService } from '../services/paymentService';
+import { TableSkeleton } from '../components/UI';
 
 const formatAmount = (value) => `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
 
@@ -322,9 +323,8 @@ function InvoicesPage() {
           )}
 
           {loading ? (
-            <div className="flex h-40 items-center justify-center text-slate-500">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Chargement des factures...
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <TableSkeleton rows={5} columns={4} />
             </div>
           ) : viewMode === 'consolidated' ? (
             consolidatedInvoices.length === 0 ? (

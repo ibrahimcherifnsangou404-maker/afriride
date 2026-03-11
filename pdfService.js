@@ -1,6 +1,25 @@
-const PDFDocument = require('pdfkit');
+﻿const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+
+/**
+ * Dessine un bloc de signature sur le document PDF.
+ * @param {PDFDocument} doc - L'instance du document PDF.
+ * @param {number} x - La position X du bloc.
+ * @param {number} y - La position Y du bloc.
+ * @param {string} title - Le titre du signataire (ex: 'Le Locataire').
+ * @param {string} subtitle - Le sous-titre (ex: 'Lu et approuvé').
+ * @param {Date | string | null} signatureDate - La date de signature.
+ */
+const drawSignatureBlock = (doc, x, y, title, subtitle, signatureDate) => {
+    doc.fillColor('black').fontSize(12).font('Helvetica-Bold').text(title, x, y);
+    doc.fontSize(8).font('Helvetica').text(subtitle, x, y + 15);
+    if (signatureDate) {
+        doc.fontSize(10).fillColor('green').text(`Signé numériquement le\n${new Date(signatureDate).toLocaleString('fr-FR')}`, x, y + 30);
+    } else {
+        doc.fontSize(10).fillColor('grey').text('(En attente de signature)', x, y + 30);
+    }
+};
 
 /**
  * Génère un PDF pour un contrat de location
@@ -38,7 +57,7 @@ const generateContractPDF = (contract, vehicle, user, agency) => {
 
             // Info Contrat (Cadre droit)
             doc.fontSize(10).text(`Réf: ${contract.contractNumber}`, { align: 'right' });
-            doc.text(`Date d'émission: ${new Date(contract.createdAt).toLocaleDateString()}`, { align: 'right' });
+            doc.text(`Date d'émission: ${new Date(contract.createdAt).toLocaleDateString('fr-FR')}`, { align: 'right' });
             doc.moveDown();
 
             // 3. Les Parties
@@ -69,8 +88,8 @@ const generateContractPDF = (contract, vehicle, user, agency) => {
             // 5. Détails de la Location
             doc.fontSize(12).font('Helvetica-Bold').text('DÉTAILS DE LA LOCATION :', { underline: true });
             doc.moveDown(0.5);
-            doc.font('Helvetica').text(`Date de début : ${new Date(contract.startDate).toLocaleDateString()}`);
-            doc.text(`Date de fin : ${new Date(contract.endDate).toLocaleDateString()}`);
+            doc.font('Helvetica').text(`Date de début : ${new Date(contract.startDate).toLocaleDateString('fr-FR')}`);
+            doc.text(`Date de fin : ${new Date(contract.endDate).toLocaleDateString('fr-FR')}`);
             doc.text(`Montant Total réglé : ${contract.totalAmount} FCFA`);
             doc.moveDown();
 
@@ -89,22 +108,10 @@ const generateContractPDF = (contract, vehicle, user, agency) => {
             const signatureY = doc.y;
 
             // Zone Client
-            doc.text('Le Locataire', 50, signatureY);
-            doc.fontSize(8).font('Helvetica').text('Lu et approuvé', 50, signatureY + 15);
-            if (contract.clientSignatureDate) {
-                doc.fontSize(10).fillColor('green').text(`Signé numériquement le\n${new Date(contract.clientSignatureDate).toLocaleString()}`, 50, signatureY + 30);
-            } else {
-                doc.fontSize(10).fillColor('grey').text('(En attente de signature)', 50, signatureY + 30);
-            }
+            drawSignatureBlock(doc, 50, signatureY, 'Le Locataire', 'Lu et approuvé', contract.clientSignatureDate);
 
             // Zone Agence
-            doc.fillColor('black').fontSize(12).font('Helvetica-Bold').text('Le Loueur', 350, signatureY);
-            doc.fontSize(8).font('Helvetica').text('Pour accord', 350, signatureY + 15);
-            if (contract.agencySignatureDate) {
-                doc.fontSize(10).fillColor('green').text(`Signé numériquement le\n${new Date(contract.agencySignatureDate).toLocaleString()}`, 350, signatureY + 30);
-            } else {
-                doc.fontSize(10).fillColor('grey').text('(En attente de signature)', 350, signatureY + 30);
-            }
+            drawSignatureBlock(doc, 350, signatureY, 'Le Loueur', 'Pour accord', contract.agencySignatureDate);
 
             // Finalisation
             doc.end();

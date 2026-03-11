@@ -1,4 +1,4 @@
-Ôªøimport { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Package, Plus, Edit, Trash2, Search, AlertCircle, CheckCircle, 
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { AuthContext } from '../../context/AuthContext';
+import { TableSkeleton } from '../../components/UI';
 import ConfirmModal from '../../components/ConfirmModal';
 import { Card, Button, Badge, InputField, EmptyState, Loading, Alert } from '../../components/UI';
 
@@ -54,8 +55,8 @@ function AdminCategories() {
       const response = await adminService.getAllCategories();
       setCategories(response.data);
     } catch (error) {
-      console.error('Erreur chargement cat√©gories:', error);
-      setError('Erreur lors du chargement des cat√©gories');
+      console.error('Erreur chargement catÈgories:', error);
+      setError('Erreur lors du chargement des catÈgories');
     } finally {
       setLoading(false);
     }
@@ -90,7 +91,7 @@ function AdminCategories() {
     setSuccess('');
     
     if (!formData.name.trim()) {
-      setError('Le nom de la cat√©gorie est obligatoire');
+      setError('Le nom de la catÈgorie est obligatoire');
       return;
     }
 
@@ -98,10 +99,10 @@ function AdminCategories() {
       setSubmitting(true);
       if (editingCategory) {
         await adminService.updateCategory(editingCategory.id, formData);
-        setSuccess('≈ì‚Ä¶ Cat√©gorie mise √† jour avec succ√®s');
+        setSuccess('úÖ CatÈgorie mise ‡ jour avec succËs');
       } else {
         await adminService.createCategory(formData);
-        setSuccess('≈ì‚Ä¶ Cat√©gorie cr√©√©e avec succ√®s');
+        setSuccess('úÖ CatÈgorie crÈÈe avec succËs');
       }
       setTimeout(() => {
         loadCategories();
@@ -110,7 +111,7 @@ function AdminCategories() {
       }, 1500);
     } catch (error) {
       console.error('Erreur:', error);
-      setError(error.response?.data?.message || 'Erreur lors de l\'op√©ration');
+      setError(error.response?.data?.message || 'Erreur lors de l\'opÈration');
     } finally {
       setSubmitting(false);
     }
@@ -129,7 +130,7 @@ function AdminCategories() {
       setDeleting(true);
       setError('');
       await adminService.deleteCategory(deleteModal.categoryId);
-      setSuccess('≈ì‚Ä¶ Cat√©gorie supprim√©e avec succ√®s');
+      setSuccess('úÖ CatÈgorie supprimÈe avec succËs');
       setTimeout(() => {
         loadCategories();
         setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' });
@@ -150,8 +151,8 @@ function AdminCategories() {
         <div className="container mx-auto px-6 max-w-7xl">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">Gestion des cat√©gories</h1>
-            <p className="text-slate-600">Administrez les cat√©gories de v√©hicules</p>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">Gestion des catÈgories</h1>
+            <p className="text-slate-600">Administrez les catÈgories de vÈhicules</p>
           </div>
 
           {/* Notifications */}
@@ -159,7 +160,9 @@ function AdminCategories() {
           {error && <Alert type="error" message={error} icon={AlertCircle} className="mb-6" />}
 
           {loading ? (
-            <Loading />
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <TableSkeleton rows={6} columns={5} />
+            </div>
           ) : (
             <>
               {/* Toolbar */}
@@ -193,7 +196,7 @@ function AdminCategories() {
 
                   <Button onClick={() => handleOpenModal()} size="md">
                     <Plus className="w-4 h-4 mr-2" />
-                    Nouvelle cat√©gorie
+                    Nouvelle catÈgorie
                   </Button>
                 </div>
               </Card>
@@ -203,7 +206,7 @@ function AdminCategories() {
                 <Card className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-slate-600 text-sm font-medium">Total des cat√©gories</p>
+                      <p className="text-slate-600 text-sm font-medium">Total des catÈgories</p>
                       <p className="text-3xl font-bold text-slate-900 mt-2">{categories.length}</p>
                     </div>
                     <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
@@ -215,7 +218,7 @@ function AdminCategories() {
                 <Card className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-slate-600 text-sm font-medium">R√©sultats de recherche</p>
+                      <p className="text-slate-600 text-sm font-medium">RÈsultats de recherche</p>
                       <p className="text-3xl font-bold text-slate-900 mt-2">{filteredCategories.length}</p>
                     </div>
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -227,7 +230,7 @@ function AdminCategories() {
                 <Card className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-slate-600 text-sm font-medium">V√©hicules total</p>
+                      <p className="text-slate-600 text-sm font-medium">VÈhicules total</p>
                       <p className="text-3xl font-bold text-slate-900 mt-2">
                         {categories.reduce((sum, c) => sum + getVehicleCount(c), 0)}
                       </p>
@@ -243,9 +246,9 @@ function AdminCategories() {
               {filteredCategories.length === 0 ? (
                 <EmptyState
                   icon={Package}
-                  title="Aucune cat√©gorie trouv√©e"
-                  message={searchTerm ? "Aucune cat√©gorie ne correspond √† votre recherche" : "Aucune cat√©gorie disponible"}
-                  action={!searchTerm && <Button onClick={() => handleOpenModal()}>Cr√©er une cat√©gorie</Button>}
+                  title="Aucune catÈgorie trouvÈe"
+                  message={searchTerm ? "Aucune catÈgorie ne correspond ‡ votre recherche" : "Aucune catÈgorie disponible"}
+                  action={!searchTerm && <Button onClick={() => handleOpenModal()}>CrÈer une catÈgorie</Button>}
                 />
               ) : (
                 <>
@@ -291,7 +294,7 @@ function AdminCategories() {
                             {/* Footer */}
                             <div className="pt-4 border-t border-slate-200">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-slate-600 uppercase">V√©hicules</span>
+                                <span className="text-xs font-semibold text-slate-600 uppercase">VÈhicules</span>
                                 <Badge variant="info">{getVehicleCount(category)}</Badge>
                               </div>
                             </div>
@@ -304,9 +307,9 @@ function AdminCategories() {
                       <table className="w-full">
                         <thead className="bg-slate-50 border-b border-slate-200">
                           <tr>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-900 uppercase">Cat√©gorie</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-900 uppercase">CatÈgorie</th>
                             <th className="px-6 py-4 text-left text-xs font-bold text-slate-900 uppercase">Description</th>
-                            <th className="px-6 py-4 text-center text-xs font-bold text-slate-900 uppercase">V√©hicules</th>
+                            <th className="px-6 py-4 text-center text-xs font-bold text-slate-900 uppercase">VÈhicules</th>
                             <th className="px-6 py-4 text-center text-xs font-bold text-slate-900 uppercase">Actions</th>
                           </tr>
                         </thead>
@@ -371,7 +374,7 @@ function AdminCategories() {
           <Card className="w-full max-w-lg animate-fadeIn">
             <div className="p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">
-                {editingCategory ? '≈ì¬è√Ø¬∏¬è Modifier la cat√©gorie' : '≈ì¬® Nouvelle cat√©gorie'}
+                {editingCategory ? 'úèÔ∏è Modifier la catÈgorie' : 'ú® Nouvelle catÈgorie'}
               </h2>
 
               {error && <Alert type="error" message={error} icon={AlertCircle} className="mb-4" />}
@@ -379,7 +382,7 @@ function AdminCategories() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-900 mb-2">
-                    Nom de la cat√©gorie *
+                    Nom de la catÈgorie *
                   </label>
                   <input
                     type="text"
@@ -398,7 +401,7 @@ function AdminCategories() {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="D√©crivez cette cat√©gorie..."
+                    placeholder="DÈcrivez cette catÈgorie..."
                     rows="4"
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-slate-900 resize-none"
                   />
@@ -418,7 +421,7 @@ function AdminCategories() {
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4 mr-2" />
-                        {editingCategory ? 'Mettre √† jour' : 'Cr√©er'}
+                        {editingCategory ? 'Mettre ‡ jour' : 'CrÈer'}
                       </>
                     )}
                   </Button>
@@ -442,8 +445,8 @@ function AdminCategories() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' })}
         onConfirm={handleDeleteConfirm}
-        title="≈°¬†√Ø¬∏¬è Supprimer la cat√©gorie"
-        message={`√ätes-vous s√ªr de vouloir supprimer "${deleteModal.categoryName}" ? Cette action est irr√©versible.`}
+        title="ö†Ô∏è Supprimer la catÈgorie"
+        message={` tes-vous s˚r de vouloir supprimer "${deleteModal.categoryName}" ? Cette action est irrÈversible.`}
         loading={deleting}
       />
     </div>
@@ -451,5 +454,6 @@ function AdminCategories() {
 }
 
 export default AdminCategories;
+
 
 

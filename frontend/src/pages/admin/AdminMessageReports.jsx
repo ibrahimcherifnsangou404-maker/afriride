@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock3, XCircle } from 'lucide-react';
-import { Card, Button, Loading } from '../../components/UI';
+import { Card, Button, TableSkeleton } from '../../components/UI';
 import { adminService } from '../../services/adminService';
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '-');
@@ -81,10 +81,10 @@ function AdminMessageReports() {
 
         <Card className="p-0 overflow-hidden" hover={false}>
           {loading ? (
-            <div className="p-8"><Loading size="sm" /></div>
-          ) : reports.length === 0 ? (
-            <div className="p-8 text-sm text-slate-500">Aucun signalement pour ce statut.</div>
-          ) : (
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <TableSkeleton rows={6} columns={6} />
+          </div>
+        ) : (
             <div className="divide-y divide-slate-200">
               {reports.map((report) => (
                 <div key={report.id} className="p-5">
@@ -154,3 +154,4 @@ function AdminMessageReports() {
 }
 
 export default AdminMessageReports;
+

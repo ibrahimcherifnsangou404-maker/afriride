@@ -239,3 +239,4 @@ console.log(data.data);
 *Bonne chance avec l'implémentation!*
 *En cas de problème: Lire la documentation pertinente*
 *Plus d'infos: Voir INDEX_FICHIERS.md*
+

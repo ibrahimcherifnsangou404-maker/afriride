@@ -10,6 +10,7 @@ import { managerService } from '../../services/managerService';
 import { AuthContext } from '../../context/AuthContext';
 import { Toast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
+import { PageSkeleton } from '../../components/UI';
 
 // --- VISUAL COMPONENTS ---
 
@@ -215,15 +216,7 @@ function ManagerDashboard() {
   const occupancyRate = stats.totalVehicles > 0 ? Math.round(((stats.totalVehicles - stats.availableVehicles) / stats.totalVehicles) * 100) : 0;
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center max-w-sm mx-4">
-          <div className="w-16 h-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mb-4" />
-          <p className="text-slate-800 font-bold text-lg">Chargement de votre espace</p>
-          <p className="text-slate-500 text-sm mt-1">Veuillez patienter...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="dashboard" />;
   }
 
   return (
@@ -608,6 +601,7 @@ function ManagerDashboard() {
 }
 
 export default ManagerDashboard;
+
 
 
 

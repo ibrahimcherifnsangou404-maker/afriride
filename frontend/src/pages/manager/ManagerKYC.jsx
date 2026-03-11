@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Clock, User, Download, ExternalLink } from 'lucide-react';
 import { adminService } from '../../services/adminService';
-import { Card, Button, Badge, Loading } from '../../components/UI';
+import { Card, Button, Badge, PageSkeleton } from '../../components/UI';
 import { Modal } from '../../components/Modal';
 import { API_BASE_URL } from '../../services/api';
 
@@ -60,7 +60,7 @@ function ManagerKYC() {
         }
     };
 
-    if (loading) return <div className="flex justify-center py-20"><Loading size="lg" /></div>;
+    if (loading) return <PageSkeleton variant="table" />;
 
     return (
         <div className="space-y-6">

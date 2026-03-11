@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { contractService } from '../services/contractService';
 import { AuthContext } from '../context/AuthContext';
+import { PageSkeleton } from '../components/UI';
 
 const formatDate = (value, withTime = false) => {
   if (!value) return '-';
@@ -56,7 +57,7 @@ function ContractPage() {
       setSigning(true);
       setError('');
       const response = await contractService.signContractAsClient(id);
-      setSuccess('Contrat signÃ© avec succÃ¨s. En attente de validation par lâ€™agence.');
+      setSuccess('Contrat signé avec succès. En attente de validation par lâ€™agence.');
       setContract(response.data.data);
       setTimeout(() => navigate('/my-bookings'), 1800);
     } catch (err) {
@@ -72,7 +73,7 @@ function ContractPage() {
       setSigning(true);
       setError('');
       const response = await contractService.signContractAsAgency(id);
-      setSuccess('Contrat signÃ© au nom de lâ€™agence.');
+      setSuccess('Contrat signé au nom de lâ€™agence.');
       setContract(response.data.data);
       setTimeout(() => loadContract(), 1000);
     } catch (err) {
@@ -88,14 +89,7 @@ function ContractPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Chargement du contrat...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="detail" />;
   }
 
   if (!contract) {
@@ -103,9 +97,9 @@ function ContractPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">
         <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center max-w-md w-full">
           <AlertCircle className="w-14 h-14 text-red-500 mx-auto mb-4" />
-          <p className="text-slate-700 font-semibold">Contrat non trouvÃ©</p>
+          <p className="text-slate-700 font-semibold">Contrat non trouvé</p>
           <Link to="/my-bookings" className="text-primary hover:underline mt-4 inline-block">
-            Retour aux rÃ©servations
+            Retour aux réservations
           </Link>
         </div>
       </div>
@@ -129,7 +123,7 @@ function ContractPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-center justify-between">
           <Link to={backLink} className="text-sm font-bold text-primary hover:text-emerald-700">
-            Retour aux rÃ©servations
+            Retour aux réservations
           </Link>
           <div className={`text-xs font-bold border rounded-full px-3 py-1 ${statusConfig.className}`}>
             {statusConfig.label}
@@ -154,11 +148,11 @@ function ContractPage() {
             <div>
               <p className="text-emerald-200 text-xs uppercase tracking-[0.16em] font-bold mb-2">Document contractuel</p>
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Contrat de location</h1>
-              <p className="text-slate-300 mt-2">RÃ©fÃ©rence {contract.contractNumber}</p>
+              <p className="text-slate-300 mt-2">Référence {contract.contractNumber}</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
               <div className="rounded-xl bg-white/10 border border-white/15 p-3">
-                <p className="text-[11px] uppercase text-slate-300 font-bold">DÃ©but</p>
+                <p className="text-[11px] uppercase text-slate-300 font-bold">Début</p>
                 <p className="font-bold">{formatDate(contract.startDate)}</p>
               </div>
               <div className="rounded-xl bg-white/10 border border-white/15 p-3">
@@ -193,7 +187,7 @@ function ContractPage() {
                   <p className="text-sm text-slate-600 mt-1">{contract.agency?.email || '-'}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs uppercase font-bold text-slate-500 mb-2">VÃ©hicule</p>
+                  <p className="text-xs uppercase font-bold text-slate-500 mb-2">Véhicule</p>
                   <p className="font-bold text-slate-900 flex items-center gap-2"><Car className="w-4 h-4" /> {contract.booking?.vehicle?.brand} {contract.booking?.vehicle?.model}</p>
                   <p className="text-sm text-slate-600 mt-1">{contract.booking?.vehicle?.licensePlate || '-'}</p>
                 </div>
@@ -203,10 +197,10 @@ function ContractPage() {
             <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
               <h2 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-slate-600" />
-                Conditions gÃ©nÃ©rales
+                Conditions générales
               </h2>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {contract.terms || 'Aucune condition gÃ©nÃ©rale renseignÃ©e.'}
+                {contract.terms || 'Aucune condition générale renseignée.'}
               </div>
             </section>
 
@@ -216,13 +210,13 @@ function ContractPage() {
                 Conditions de paiement
               </h2>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {contract.paymentTerms || 'Aucune condition de paiement renseignÃ©e.'}
+                {contract.paymentTerms || 'Aucune condition de paiement renseignée.'}
               </div>
             </section>
 
             {contract.notes && (
               <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
-                <h2 className="text-xl font-black text-slate-900 mb-4">Notes complÃ©mentaires</h2>
+                <h2 className="text-xl font-black text-slate-900 mb-4">Notes complémentaires</h2>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 whitespace-pre-wrap">
                   {contract.notes}
                 </div>
@@ -239,7 +233,7 @@ function ContractPage() {
                     <p className="font-bold text-slate-900">Client</p>
                     {isClientSigned ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <XCircle className="w-5 h-5 text-slate-400" />}
                   </div>
-                  <p className="text-sm text-slate-600">{isClientSigned ? `SignÃ© le ${formatDate(contract.clientSignatureDate, true)}` : 'Signature en attente'}</p>
+                  <p className="text-sm text-slate-600">{isClientSigned ? `Signé le ${formatDate(contract.clientSignatureDate, true)}` : 'Signature en attente'}</p>
                   {user?.role === 'client' && !isClientSigned && (
                     <button
                       onClick={handleSignAsClient}
@@ -256,7 +250,7 @@ function ContractPage() {
                     <p className="font-bold text-slate-900">Agence</p>
                     {isAgencySigned ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <XCircle className="w-5 h-5 text-slate-400" />}
                   </div>
-                  <p className="text-sm text-slate-600">{isAgencySigned ? `SignÃ© le ${formatDate(contract.agencySignatureDate, true)}` : 'Signature en attente'}</p>
+                  <p className="text-sm text-slate-600">{isAgencySigned ? `Signé le ${formatDate(contract.agencySignatureDate, true)}` : 'Signature en attente'}</p>
                   {(user?.role === 'manager' || user?.role === 'admin') && !isAgencySigned && (
                     <button
                       onClick={handleSignAsAgency}
@@ -280,7 +274,7 @@ function ContractPage() {
                     className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800"
                   >
                     <Download className="w-4 h-4" />
-                    TÃ©lÃ©charger le PDF
+                    Télécharger le PDF
                   </a>
                 )}
                 <button
@@ -306,6 +300,7 @@ function ContractPage() {
 }
 
 export default ContractPage;
+
 
 
 

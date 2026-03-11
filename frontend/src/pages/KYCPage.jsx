@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { Upload, CheckCircle, AlertCircle, Clock, FileText, Camera, X } from 'lucide-react';
 import { userService } from '../services/userService';
-import { Button, Card, Badge, Loading } from '../components/UI';
+import { Button, Card, Badge, PageSkeleton, Loading } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 
 function KYCPage() {
@@ -97,7 +97,7 @@ function KYCPage() {
         }
     };
 
-    if (loading) return <div className="flex justify-center py-20"><Loading size="lg" /></div>;
+    if (loading) return <PageSkeleton variant="form" />;
 
     const statusMap = {
         unverified: { color: 'bg-gray-100 text-gray-800', label: 'Non vérifié', icon: AlertCircle },

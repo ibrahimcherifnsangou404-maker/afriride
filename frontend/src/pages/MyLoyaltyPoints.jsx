@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { loyaltyService } from '../services/loyaltyService';
 import { AuthContext } from '../context/AuthContext';
-import { Button, Card, Loading, Badge } from '../components/UI';
+import { Button, Card, Badge, TableSkeleton } from '../components/UI';
 import { Footer } from '../components/Layout/Footer';
 
 function MyLoyaltyPoints() {
@@ -206,7 +206,9 @@ function MyLoyaltyPoints() {
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               {loading ? (
-                <div className="p-12"><Loading /></div>
+                <div className="p-6">
+                  <TableSkeleton rows={5} columns={3} />
+                </div>
               ) : history.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">

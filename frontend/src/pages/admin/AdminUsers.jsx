@@ -1,8 +1,9 @@
-ï»¿import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Car, Users, Mail, Phone, Building2,Plus  } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { AuthContext } from '../../context/AuthContext';
+import { TableSkeleton } from '../../components/UI';
 
 function AdminUsers() {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ function AdminUsers() {
          className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-green-600 flex items-center space-x-2"
         >
          <Plus className="w-5 h-5" />
-         <span>CrÃ©er un gestionnaire</span>
+         <span>Créer un gestionnaire</span>
         </Link>
        </div>
 
@@ -128,9 +129,8 @@ function AdminUsers() {
         </div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary mx-auto"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <TableSkeleton rows={7} columns={6} />
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -140,7 +140,7 @@ function AdminUsers() {
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Utilisateur</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Contact</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">RÃ´le</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Rôle</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Agence</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Statut</th>
                   </tr>
@@ -196,7 +196,7 @@ function AdminUsers() {
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {u.isVerified ? 'VÃ©rifiÃ©' : 'Non vÃ©rifiÃ©'}
+                          {u.isVerified ? 'Vérifié' : 'Non vérifié'}
                         </span>
                       </td>
                     </tr>
@@ -212,4 +212,5 @@ function AdminUsers() {
 }
 
 export default AdminUsers;
+
 

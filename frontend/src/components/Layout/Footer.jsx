@@ -1,4 +1,4 @@
-﻿import { MapPin, Mail, Phone, Linkedin, Twitter, Github } from 'lucide-react';
+import { MapPin, Mail, Phone, Linkedin, Twitter, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import logo from '../../assets/afriride-logo.png';
 
@@ -8,10 +8,10 @@ export function Footer() {
   return (
     <footer className="bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100">
       {/* Main Footer Content */}
-      <div className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
+      <div className="container mx-auto px-4 sm:px-6 py-10 md:py-16">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-8 md:gap-12 mb-10 md:mb-12">
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="sm:col-span-2 md:col-span-1">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-10 h-10 rounded-lg overflow-hidden bg-white border border-slate-700/40 shadow-lg">
                 <img src={logo} alt="AfriRide" className="w-full h-full object-contain" />

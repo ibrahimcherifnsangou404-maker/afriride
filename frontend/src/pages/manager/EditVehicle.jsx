@@ -1,9 +1,10 @@
-ï»¿import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Car, Upload, X, AlertCircle, Loader } from 'lucide-react';
 import { vehicleService } from '../../services/vehicleService';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import { PageSkeleton } from '../../components/UI';
 import { API_BASE_URL } from '../../services/api';
 
 function EditVehicle() {
@@ -65,8 +66,8 @@ function EditVehicle() {
       setExistingImages(vehicle.images || []);
       setCategories(categoriesResponse.data);
     } catch (error) {
-      console.error('Erreur chargement donnÃ©es:', error);
-      setError('Erreur lors du chargement du vÃ©hicule');
+      console.error('Erreur chargement données:', error);
+      setError('Erreur lors du chargement du véhicule');
     } finally {
       setLoading(false);
     }
@@ -100,7 +101,7 @@ function EditVehicle() {
 
     setNewImages(prev => [...prev, ...files]);
 
-    // CrÃ©er les aperÃ§us
+    // Créer les aperçus
     files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -148,14 +149,14 @@ function EditVehicle() {
     }
 
     if (existingImages.length === 0 && newImages.length === 0) {
-      setError('Le vÃ©hicule doit avoir au moins une image');
+      setError('Le véhicule doit avoir au moins une image');
       return;
     }
 
     try {
       setSaving(true);
 
-      // CrÃ©er FormData pour l'upload
+      // Créer FormData pour l'upload
       const submitData = new FormData();
 
       // Ajouter les champs
@@ -167,7 +168,7 @@ function EditVehicle() {
         }
       });
 
-      // Ajouter les images existantes Ã  conserver
+      // Ajouter les images existantes à conserver
       submitData.append('existingImages', JSON.stringify(existingImages));
 
       // Ajouter les nouvelles images
@@ -183,28 +184,21 @@ function EditVehicle() {
       });
 
       if (response.data.success) {
-        setSuccess('VÃ©hicule mis Ã  jour avec succÃ¨s !');
+        setSuccess('Véhicule mis à jour avec succès !');
         setTimeout(() => {
           navigate('/manager/vehicles');
         }, 2000);
       }
     } catch (error) {
-      console.error('Erreur modification vÃ©hicule:', error);
-      setError(error.response?.data?.message || 'Erreur lors de la modification du vÃ©hicule');
+      console.error('Erreur modification véhicule:', error);
+      setError(error.response?.data?.message || 'Erreur lors de la modification du véhicule');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="form" />;
   }
 
   return (
@@ -213,7 +207,7 @@ function EditVehicle() {
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Modifier le vÃ©hicule</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Modifier le véhicule</h1>
             <p className="text-gray-600">
               {formData.brand} {formData.model} - {formData.licensePlate}
             </p>
@@ -288,7 +282,7 @@ function EditVehicle() {
                   </p>
                 </div>
 
-                {/* AperÃ§us nouvelles images */}
+                {/* Aperçus nouvelles images */}
                 {newImagePreviews.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
                     {newImagePreviews.map((preview, index) => (
@@ -330,7 +324,7 @@ function EditVehicle() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ModÃ¨le *
+                  Modèle *
                 </label>
                 <input
                   type="text"
@@ -344,7 +338,7 @@ function EditVehicle() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  AnnÃ©e *
+                  Année *
                 </label>
                 <input
                   type="number"
@@ -428,7 +422,7 @@ function EditVehicle() {
                 >
                   <option value="petrol">Essence</option>
                   <option value="diesel">Diesel</option>
-                  <option value="electric">Ã‰lectrique</option>
+                  <option value="electric">Électrique</option>
                   <option value="hybrid">Hybride</option>
                 </select>
               </div>
@@ -450,7 +444,7 @@ function EditVehicle() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CatÃ©gorie *
+                  Catégorie *
                 </label>
                 <select
                   name="categoryId"
@@ -468,7 +462,7 @@ function EditVehicle() {
               </div>
             </div>
 
-            {/* DisponibilitÃ© */}
+            {/* Disponibilité */}
             <div className="mb-6">
               <label className="flex items-center cursor-pointer">
                 <input
@@ -479,15 +473,15 @@ function EditVehicle() {
                   className="w-5 h-5 text-primary focus:ring-primary border-gray-300 rounded"
                 />
                 <span className="ml-3 text-sm font-medium text-gray-700">
-                  VÃ©hicule disponible Ã  la location
+                  Véhicule disponible à la location
                 </span>
               </label>
             </div>
 
-            {/* Ã‰quipements */}
+            {/* Équipements */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ã‰quipements
+                Équipements
               </label>
               <div className="flex gap-2 mb-3">
                 <input
@@ -535,7 +529,7 @@ function EditVehicle() {
                 disabled={saving}
                 className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-green-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? 'Mise Ã  jour en cours...' : 'Enregistrer les modifications'}
+                {saving ? 'Mise à jour en cours...' : 'Enregistrer les modifications'}
               </button>
               <Link
                 to="/manager/vehicles"
@@ -552,4 +546,6 @@ function EditVehicle() {
 }
 
 export default EditVehicle;
+
+
 

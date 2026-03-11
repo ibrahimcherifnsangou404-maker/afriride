@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, CheckCircle2, XCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { contractService } from '../services/contractService';
+import { Skeleton } from './UI';
 
 function BookingContracts({ bookingId }) {
   const [contracts, setContracts] = useState([]);
@@ -27,7 +28,26 @@ function BookingContracts({ bookingId }) {
   }, [loadContracts]);
 
   if (loading) {
-    return <div className="text-center text-slate-600">Chargement des contrats...</div>;
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 2 }).map((_, idx) => (
+          <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-3 w-full">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-4 w-40 mt-2" />
+                  <Skeleton className="h-4 w-32 mt-2" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-20" />
+            </div>
+            <Skeleton className="h-10 w-40 mt-4" />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   if (error) {

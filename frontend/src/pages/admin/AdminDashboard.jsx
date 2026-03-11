@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Car, Building2, Users, Calendar, DollarSign, TrendingUp, Package,
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { AuthContext } from '../../context/AuthContext';
-import { Card, Button, Badge, Loading, EmptyState, Alert } from '../../components/UI';
+import { Card, Button, Badge, EmptyState, Alert, PageSkeleton } from '../../components/UI';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -61,12 +61,7 @@ function AdminDashboard() {
   const isTrendPositive = trendValue >= 0;
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">\n<div className="flex items-center justify-center h-96">
-          <Loading />
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="dashboard" />;
   }
 
   return (
@@ -317,56 +312,6 @@ function AdminDashboard() {
                     );
                   })
                 ) : (
-                  <div className="py-8 text-center">
-                    <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-slate-600 text-sm">Aucune donnée</p>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* TOP AGENCIES - Ranked Leaderboard */}
-            <Card className="overflow-hidden">
-              <div className="p-6 border-b border-slate-200">
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary-600" />
-                  Meilleures agences
-                </h2>
-              </div>
-
-              <div className="divide-y divide-slate-200">
-                {dashboardData?.topAgencies && dashboardData.topAgencies.length > 0 ? (
-                  dashboardData.topAgencies.map((agency, index) => (
-                    <Link
-                      key={agency.id}
-                      to={`/admin/agencies?focus=${agency.id}`}
-                      className="p-6 hover:bg-slate-50 transition-colors group cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        {/* Rank Badge + Name */}
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className={`flex items-center justify-center w-10 h-10 rounded-full font-black text-white ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg' :
-                              index === 1 ? 'bg-gradient-to-br from-slate-400 to-slate-600' :
-                                'bg-gradient-to-br from-amber-600 to-amber-800'
-                            }`}>
-                            {index === 0 ? '1' : index === 1 ? '2' : '3'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-slate-900 truncate group-hover:text-primary-600 transition-colors">
-                              {agency.name}
-                            </div>
-                            <div className="text-xs text-slate-600 mt-1">
-                              <span className="font-semibold text-primary-600">{agency.bookingCount}</span> réservations
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Performance indicator */}
-                        <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </Link>
-                  ))
-                ) : (
                   <div className="p-8 text-center">
                     <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="text-slate-600 text-sm">Aucune agence</p>
@@ -398,14 +343,14 @@ function AdminDashboard() {
             </div>
 
             {dashboardData?.recentBookings && dashboardData.recentBookings.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
                       <th className="px-6 py-3 text-left font-bold text-slate-900 uppercase tracking-wider text-xs">Véhicule</th>
                       <th className="px-6 py-3 text-left font-bold text-slate-900 uppercase tracking-wider text-xs">Client</th>
-                      <th className="px-6 py-3 text-left font-bold text-slate-900 uppercase tracking-wider text-xs">Agence</th>
-                      <th className="px-6 py-3 text-left font-bold text-slate-900 uppercase tracking-wider text-xs">Période</th>
+                      <th className="hidden md:table-cell px-6 py-3 text-left font-bold text-slate-900 uppercase tracking-wider text-xs">Agence</th>
+                      <th className="hidden sm:table-cell px-6 py-3 text-left font-bold text-slate-900 uppercase tracking-wider text-xs">Période</th>
                       <th className="px-6 py-3 text-right font-bold text-slate-900 uppercase tracking-wider text-xs">Montant</th>
                       <th className="px-6 py-3 text-center font-bold text-slate-900 uppercase tracking-wider text-xs">Statut</th>
                     </tr>
@@ -424,37 +369,21 @@ function AdminDashboard() {
                           {/* Vehicle */}
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 hidden sm:flex items-center justify-center">
                                 <Car className="w-5 h-5 text-primary-600" />
                               </div>
                               <div className="font-semibold text-slate-900">
-                                {booking.vehicle?.brand || 'Vehicule'} {booking.vehicle?.model || ''}
+                                {booking.vehicle?.brand || 'Véhicule'} {booking.vehicle?.model || ''}
+                                <div className="text-xs text-slate-500 sm:hidden mt-0.5">{booking.totalDays}j • {new Date(booking.startDate).toLocaleDateString()}</div>
                               </div>
                             </div>
-                            <div className="text-xs text-slate-600 mt-1">{booking.vehicle?.year || '-'}</div>
+                            <div className="text-xs text-slate-600 mt-1 hidden sm:block">{booking.vehicle?.year || '-'}</div>
                           </td>
 
                           {/* Client */}
                           <td className="px-6 py-4">
                             <div className="font-semibold text-slate-900">
                               {booking.user?.firstName || 'Utilisateur'} {booking.user?.lastName || ''}
-                            </div>
-                            <div className="text-xs text-slate-600 mt-1">{booking.user?.email || '-'}</div>
-                          </td>
-
-                          {/* Agency */}
-                          <td className="px-6 py-4 text-slate-900 font-medium">
-                            {booking.vehicle.agency?.name}
-                          </td>
-
-                          {/* Dates */}
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1 text-slate-900 text-sm font-medium">
-                              <Calendar className="w-4 h-4 text-slate-400" />
-                              {new Date(booking.startDate).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-                            </div>
-                            <div className="text-xs text-slate-600 mt-1">
-                              {booking.totalDays} jour{booking.totalDays > 1 ? 's' : ''}
                             </div>
                           </td>
 

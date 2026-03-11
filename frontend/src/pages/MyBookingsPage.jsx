@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Car, Calendar, MapPin, Clock, XCircle, CheckCircle, AlertCircle, Star,
@@ -9,7 +9,7 @@ import { reviewService } from '../services/reviewService';
 import { AuthContext } from '../context/AuthContext';
 import BookingContracts from '../components/BookingContracts';
 import { Footer } from '../components/Layout/Footer';
-import { Card, Button, Badge, Loading, EmptyState } from '../components/UI';
+import { Card, Button, Badge, EmptyState, TableSkeleton } from '../components/UI';
 import { API_BASE_URL } from '../services/api';
 
 
@@ -231,17 +231,8 @@ function MyBookingsPage() {
 
         {/* Liste des réservations */}
         {loading ? (
-          <div className="py-12 flex justify-center"><Loading /></div>
-        ) : filteredBookings.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Car className="w-8 h-8 text-slate-400" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Aucune réservation trouvée</h3>
-            <p className="text-slate-500 mb-6">Vous n'avez aucune réservation dans cette catégorie pour le moment.</p>
-            <Link to="/vehicles">
-              <Button>Réserver un véhicule</Button>
-            </Link>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <TableSkeleton rows={6} columns={6} />
           </div>
         ) : (
           <div className="space-y-6">
@@ -290,6 +281,8 @@ function MyBookingsPage() {
                           </p>
                         </div>
 
+                        
+
                         <div className="text-left md:text-right bg-slate-50 p-3 rounded-lg border border-slate-100">
                           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Total</p>
                           <p className="text-lg font-black text-slate-900">{parseFloat(booking.totalPrice).toLocaleString()} FCFA</p>
@@ -313,14 +306,14 @@ function MyBookingsPage() {
                       </div>
 
                       {/* Footer Actions */}
-                      <div className="mt-auto pt-6 border-t border-slate-100 flex flex-wrap gap-3 items-center justify-between">
+                      <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                         <Link to={`/vehicles/${booking.vehicle.id}`} className="text-sm font-bold text-primary-600 hover:text-primary-700 flex items-center">
                           Voir le véhicule <ChevronRight className="w-4 h-4 ml-1" />
                         </Link>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
                           {booking.status === 'pending' && !latestApproval && (
-                            <Button variant="secondary" size="sm" onClick={() => handleRequestApproval(booking.id)}>
+                            <Button variant="secondary" size="sm" onClick={() => handleRequestApproval(booking.id)} className="flex-1 sm:flex-none">
                               Demander approbation
                             </Button>
                           )}
@@ -330,21 +323,21 @@ function MyBookingsPage() {
                           )}
 
                           {latestApproval?.status === 'approved' && (
-                            <Badge variant="success" size="sm">Approuvee</Badge>
+                            <Badge variant="success" size="sm">Approuvée</Badge>
                           )}
 
                           {latestApproval?.status === 'rejected' && (
-                            <Badge variant="danger" size="sm">Rejetee</Badge>
+                            <Badge variant="danger" size="sm">Rejetée</Badge>
                           )}
 
                           {(booking.status === 'pending' || booking.status === 'confirmed') && (
-                            <Button variant="outline" size="sm" onClick={() => handleCancelBooking(booking.id)} className="text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200">
+                            <Button variant="outline" size="sm" onClick={() => handleCancelBooking(booking.id)} className="flex-1 sm:flex-none text-red-600 border-red-100 hover:bg-red-50 hover:border-red-200">
                               Annuler
                             </Button>
                           )}
 
                           {booking.status === 'completed' && !booking.review && (
-                            <Button size="sm" onClick={() => { setSelectedBooking(booking); setShowReviewModal(true); }}>
+                            <Button size="sm" onClick={() => { setSelectedBooking(booking); setShowReviewModal(true); }} className="flex-1 sm:flex-none">
                               <Star className="w-4 h-4 mr-2" />
                               Noter
                             </Button>
@@ -352,7 +345,9 @@ function MyBookingsPage() {
 
                           {/* Devis / Contrat */}
                           {booking.status !== 'cancelled' && (
-                            <BookingContracts bookingId={booking.id} bookingStatus={booking.status} />
+                            <div className="w-full sm:w-auto mt-2 sm:mt-0">
+                                <BookingContracts bookingId={booking.id} bookingStatus={booking.status} />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -370,7 +365,7 @@ function MyBookingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-8 transform scale-100 transition-all">
             <h3 className="text-2xl font-bold text-slate-900 mb-2">Notez votre expérience</h3>
-            <p className="text-slate-500 mb-6">Comment s'est passée votre location avec {selectedBooking?.vehicle.brand} {selectedBooking?.vehicle.model} ?</p>
+            <p className="text-slate-500 mb-6">Comment s'est passée votre location avec {selectedBooking?.vehicle?.brand} {selectedBooking?.vehicle?.model} ?</p>
 
             <div className="flex justify-center gap-2 mb-8">
               {[1, 2, 3, 4, 5].map((star) => (

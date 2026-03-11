@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, CheckCircle, X, AlertCircle, Download } from 'lucide-react';
 import { contractService } from '../services/contractService';
+import { Skeleton } from './UI';
 
 function ContractReview({ bookingId, onAccept, onCancel }) {
   const [contract, setContract] = useState(null);
@@ -65,9 +66,11 @@ function ContractReview({ bookingId, onAccept, onCancel }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary mx-auto mb-4" />
-        <p className="text-gray-600">Generation du contrat en cours...</p>
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        <Skeleton className="h-8 w-1/3 mb-4" />
+        <Skeleton className="h-4 w-1/2 mb-6" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-10 w-40 mt-6" />
       </div>
     );
   }

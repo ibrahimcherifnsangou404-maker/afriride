@@ -18,6 +18,7 @@ import {
 import { managerService } from '../../services/managerService';
 import { AuthContext } from '../../context/AuthContext';
 import { Toast } from '../../components/Toast';
+import { PageSkeleton } from '../../components/UI';
 import { paymentService } from '../../services/paymentService';
 
 const formatMoney = (value) => `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
@@ -295,14 +296,7 @@ export default function ManagerRevenue() {
   }, [stats]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-slate-100 border-t-emerald-500" />
-          <p className="font-semibold text-slate-600">Analyse financière en cours...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="dashboard" />;
   }
 
   return (
@@ -558,5 +552,6 @@ export default function ManagerRevenue() {
     </div>
   );
 }
+
 
 

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 import { paymentService } from '../services/paymentService';
-import { Button, Card } from '../components/UI';
+import { Button, Card, PageSkeleton } from '../components/UI';
 
 function PaymentPage() {
     const { bookingId } = useParams();
@@ -91,11 +91,7 @@ function PaymentPage() {
         }
     };
 
-    if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <Loader className="w-12 h-12 text-blue-600 animate-spin" />
-        </div>
-    );
+    if (loading) return <PageSkeleton variant="payment" />;
 
     const handleDownloadReceipt = async () => {
         try {

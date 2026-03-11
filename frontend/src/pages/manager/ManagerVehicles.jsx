@@ -1,9 +1,10 @@
-Ôªøimport { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Car, Plus, Edit, Trash2, Eye, Search, Filter, Fuel, Calendar, Settings } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { vehicleService } from '../../services/vehicleService';
 import { AuthContext } from '../../context/AuthContext';
+import { TableSkeleton } from '../../components/UI';
 import ConfirmModal from '../../components/ConfirmModal';
 import { API_BASE_URL } from '../../services/api';
 
@@ -43,7 +44,7 @@ const VehicleCard = ({ vehicle, onDelete }) => {
             <h3 className="text-xl font-black text-slate-900 leading-tight">
               {vehicle.brand} {vehicle.model}
             </h3>
-            <p className="text-slate-500 font-medium">{vehicle.category?.name || 'Non class√©'}</p>
+            <p className="text-slate-500 font-medium">{vehicle.category?.name || 'Non classÈ'}</p>
           </div>
           <div className="text-right">
             <p className="text-lg font-black text-blue-600">
@@ -121,7 +122,7 @@ function ManagerVehicles() {
       const response = await managerService.getAgencyVehicles();
       setVehicles(response.data);
     } catch (error) {
-      console.error('Erreur chargement v√©hicules:', error);
+      console.error('Erreur chargement vÈhicules:', error);
     } finally {
       setLoading(false);
     }
@@ -165,16 +166,16 @@ function ManagerVehicles() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-              Mes V√©hicules
+              Mes VÈhicules
             </h1>
-            <p className="text-slate-500 font-medium">G√©rez votre flotte et ses disponibilit√©s</p>
+            <p className="text-slate-500 font-medium">GÈrez votre flotte et ses disponibilitÈs</p>
           </div>
           <Link
             to="/manager/vehicles/add"
             className="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 transition-all flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Ajouter un v√©hicule</span>
+            <span>Ajouter un vÈhicule</span>
           </Link>
         </div>
 
@@ -184,7 +185,7 @@ function ManagerVehicles() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Rechercher un v√©hicule (marque, mod√®le)..."
+              placeholder="Rechercher un vÈhicule (marque, modËle)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm text-sm font-medium"
@@ -198,30 +199,8 @@ function ManagerVehicles() {
 
         {/* Grid */}
         {loading ? (
-          <div className="min-h-[400px] flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-slate-600 font-medium">Chargement de la flotte...</p>
-            </div>
-          </div>
-        ) : filteredVehicles.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-sm">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-              <Car className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucun v√©hicule trouv√©</h3>
-            <p className="text-slate-500 mb-8 max-w-md mx-auto">
-              {searchQuery ? 'Aucun r√©sultat pour votre recherche.' : 'Votre agence n\'a pas encore de v√©hicules enregistr√©s.'}
-            </p>
-            {!searchQuery && (
-              <Link
-                to="/manager/vehicles/add"
-                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Ajouter mon premier v√©hicule
-              </Link>
-            )}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <TableSkeleton rows={6} columns={6} />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
@@ -240,8 +219,8 @@ function ManagerVehicles() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
         onConfirm={handleDeleteConfirm}
-        title="Supprimer le v√©hicule"
-        message={`√ätes-vous s√ªr de vouloir supprimer "${deleteModal.vehicleName}" ?`}
+        title="Supprimer le vÈhicule"
+        message={` tes-vous s˚r de vouloir supprimer "${deleteModal.vehicleName}" ?`}
         loading={deleting}
       />
     </div>
@@ -249,5 +228,6 @@ function ManagerVehicles() {
 }
 
 export default ManagerVehicles;
+
 
 

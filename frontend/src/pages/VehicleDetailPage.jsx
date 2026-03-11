@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Car, ArrowLeft, MapPin, Users, Fuel, Settings,
@@ -354,7 +354,7 @@ function VehicleDetailPage() {
           </div>
         </div>
       </div>
-    );
+      );
   }
 
   if (!vehicle) {
@@ -375,7 +375,7 @@ function VehicleDetailPage() {
     : [getImageUrl(vehicle.image)];
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-slate-50 pb-28 lg:pb-20">
       {/* 1. Header / Navigation Rapide */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40 bg-opacity-90 backdrop-blur-md">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
@@ -834,7 +834,4 @@ function VehicleDetailPage() {
 }
 
 export default VehicleDetailPage;
-
-
-
 

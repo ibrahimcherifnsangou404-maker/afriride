@@ -3,10 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, Archive, Ban, MessageCircle, Mic, MoreVertical,
   Paperclip, Plus, Search, Send, SlidersHorizontal, Square, Star,
-  Trash2, UserRound, X, ArrowLeft, Phone, Video, CheckCheck, Check
+  Trash2, UserRound, X, ArrowLeft, CheckCheck, Check
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, EmptyState, Loading } from '../components/UI';
+import { Button, Card, EmptyState, PageSkeleton } from '../components/UI';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { messageService } from '../services/messageService';
 import { API_BASE_URL } from '../services/api';
@@ -16,7 +16,6 @@ import { connectSocket } from '../services/socket';
 const PINNED_STORAGE_KEY = 'messages:pinned_conversations';
 const ARCHIVED_STORAGE_KEY = 'messages:archived_conversations';
 const REPORT_REASON_OPTIONS = ['spam', 'abuse', 'harassment', 'fraud', 'other'];
-
 /* ─── helpers ─── */
 const formatDateTime = (date) => (date ? new Date(date).toLocaleString() : '');
 const formatTime = (date) =>
@@ -546,16 +545,7 @@ function MessagesPage() {
 
   /* ── RENDER ── */
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <MessageCircle className="w-6 h-6 text-white" />
-          </div>
-          <p className="text-slate-400 text-sm font-medium">Chargement de la messagerie…</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton variant="chat" />;
   }
 
   const otherParticipant = activeConversation?.otherParticipant;
@@ -1199,3 +1189,4 @@ function MessagesPageWithBoundary() {
 }
 
 export default MessagesPageWithBoundary;
+

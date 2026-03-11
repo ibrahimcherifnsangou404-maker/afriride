@@ -7,6 +7,7 @@ import {
 import { managerService } from '../../services/managerService';
 import { contractService } from '../../services/contractService';
 import { AuthContext } from '../../context/AuthContext';
+import { TableSkeleton } from '../../components/UI';
 import { Toast } from '../../components/Toast';
 import { API_BASE_URL } from '../../services/api';
 
@@ -230,19 +231,8 @@ export default function ManagerBookings() {
         )}
 
         {loading ? (
-          <div className="min-h-[400px] flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-slate-600 font-medium">Chargement des réservations...</p>
-            </div>
-          </div>
-        ) : bookings.length === 0 ? (
-          <div className="bg-white rounded-3xl p-16 text-center border border-slate-100 shadow-sm">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-              <Calendar className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Aucune réservation trouvée</h3>
-            <p className="text-slate-500">Essayez de modifier vos filtres de recherche.</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <TableSkeleton rows={6} columns={7} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -354,3 +344,4 @@ export default function ManagerBookings() {
     </div>
   );
 }
+

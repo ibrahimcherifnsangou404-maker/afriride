@@ -1,8 +1,9 @@
-ï»¿import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Car, Star, Check, Trash2, MessageSquare } from 'lucide-react';
 import { reviewService } from '../../services/reviewService';
 import { AuthContext } from '../../context/AuthContext';
+import { TableSkeleton } from '../../components/UI';
 import ConfirmModal from '../../components/ConfirmModal';
 
 function AdminReviews() {
@@ -27,7 +28,7 @@ function AdminReviews() {
     try {
       setLoading(true);
       const response = await reviewService.getAllReviews();
-      // La rÃ©ponse peut Ãªtre { success, count, data } ou directement { data: [...] }
+      // La réponse peut être { success, count, data } ou directement { data: [...] }
       const data = response?.data ?? response?.data ?? response ?? [];
       const items = Array.isArray(data) ? data : (data.data ?? data);
       setReviews(Array.isArray(items) ? items : []);
@@ -42,7 +43,7 @@ function AdminReviews() {
     try {
       const res = await reviewService.approveReview(reviewId);
       if (res?.message) alert(res.message);
-      else alert('Avis approuvÃ© avec succÃ¨s');
+      else alert('Avis approuvé avec succès');
       await loadReviews();
     } catch (error) {
       console.error('Erreur approbation:', error);
@@ -60,7 +61,7 @@ function AdminReviews() {
       await reviewService.deleteReview(deleteModal.reviewId);
       loadReviews();
       setDeleteModal({ isOpen: false, reviewId: null });
-      alert('Avis supprimÃ© avec succÃ¨s');
+      alert('Avis supprimé avec succès');
     } catch (error) {
       console.error('Erreur suppression:', error);
       alert('Erreur lors de la suppression');
@@ -81,7 +82,7 @@ function AdminReviews() {
       {/* Header */}\n{/* Contenu */}
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">ModÃ©ration des avis</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Modération des avis</h1>
           <p className="text-gray-600">Approuvez ou supprimez les avis clients</p>
         </div>
 
@@ -116,20 +117,14 @@ function AdminReviews() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              ApprouvÃ©s ({reviews.filter(r => r.isApproved).length})
+              Approuvés ({reviews.filter(r => r.isApproved).length})
             </button>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary mx-auto"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
-          </div>
-        ) : filteredReviews.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-lg">
-            <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-xl text-gray-600">Aucun avis</p>
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <TableSkeleton rows={6} columns={6} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -154,12 +149,12 @@ function AdminReviews() {
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {review.isApproved ? 'ApprouvÃ©' : 'En attente'}
+                        {review.isApproved ? 'Approuvé' : 'En attente'}
                       </span>
                     </div>
 
                     <div className="mb-3">
-                      <p className="text-gray-600 text-sm mb-1">VÃ©hicule</p>
+                      <p className="text-gray-600 text-sm mb-1">Véhicule</p>
                       <p className="font-semibold">
                         {review.vehicle.brand} {review.vehicle.model} ({review.vehicle.year})
                       </p>
@@ -217,7 +212,7 @@ function AdminReviews() {
         onClose={() => setDeleteModal({ isOpen: false, reviewId: null })}
         onConfirm={handleDeleteConfirm}
         title="Supprimer l'avis"
-        message="ÃŠtes-vous sÃ»r de vouloir supprimer cet avis ? Cette action est irrÃ©versible."
+        message="Êtes-vous sûr de vouloir supprimer cet avis ? Cette action est irréversible."
         loading={deleting}
       />
     </div>
@@ -225,5 +220,6 @@ function AdminReviews() {
 }
 
 export default AdminReviews;
+
 
 

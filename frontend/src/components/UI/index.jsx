@@ -175,3 +175,5 @@ export function EmptyState({ icon: Icon, title, message, action }) {
   );
 }
 
+export { PageSkeleton, TableSkeleton } from './Skeletons';
+
