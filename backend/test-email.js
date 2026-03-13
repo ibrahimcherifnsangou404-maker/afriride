@@ -19,13 +19,9 @@ console.log('â•'.repeat(50));
 // 1. VÃ©rifier les variables
 console.log('\nðŸ“‹ VARIABLES D\'ENVIRONNEMENT:\n');
 
-const requiredVars = [
-  'EMAIL_HOST',
-  'EMAIL_PORT',
-  'EMAIL_USER',
-  'EMAIL_PASSWORD',
-  'EMAIL_FROM'
-];
+const isResend = Boolean(process.env.RESEND_API_KEY);
+
+const requiredVars = isResend ? ['RESEND_API_KEY', 'EMAIL_FROM'] : ['EMAIL_HOST','EMAIL_PORT','EMAIL_USER','EMAIL_PASSWORD','EMAIL_FROM'];
 
 let allSet = true;
 requiredVars.forEach(varName => {
@@ -45,6 +41,55 @@ if (!allSet) {
   process.exit(1);
 }
 
+if (isResend) {
+  console.log('\n\n?? TEST VIA RESEND API:\n');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  const payload = {
+    from: process.env.EMAIL_FROM,
+    to: [process.env.EMAIL_FROM],
+    subject: '? Test Configuration Email - AfriRide',
+    html: `
+      <div style="font-family: Arial; padding: 20px;">
+        <h2 style="color: #667eea;">? Configuration Email Réussie (Resend)!</h2>
+        <p>Ce email a été envoyé avec succès via Resend.</p>
+        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>Détails:</strong></p>
+          <p>Email From: ${process.env.EMAIL_FROM}</p>
+          <p>Timestamp: ${new Date().toLocaleString('fr-FR')}</p>
+          <p>Status: ? OK</p>
+        </div>
+      </div>
+    `
+  };
+
+  fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload),
+    signal: controller.signal
+  })
+    .then(async (res) => {
+      clearTimeout(timeout);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.log('? Erreur Resend:', data?.message || res.status);
+        process.exit(1);
+      }
+      console.log('? Email de test envoyé via Resend!');
+      console.log(`?? Message ID: ${data?.id || 'N/A'}`);
+      process.exit(0);
+    })
+    .catch((err) => {
+      clearTimeout(timeout);
+      console.log('? Erreur Resend:', err.message || err);
+      process.exit(1);
+    });
+  return;
+}
 // 2. Tester la connexion
 console.log('\n\nðŸ“§ TEST DE CONNEXION AU SERVEUR EMAIL:\n');
 
@@ -127,3 +172,5 @@ transporter.verify((error, success) => {
     });
   }
 });
+
+

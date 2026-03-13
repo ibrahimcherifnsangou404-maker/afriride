@@ -8,10 +8,12 @@ const isEmailConfigured = !!(
   process.env.EMAIL_USER !== 'votre_email@gmail.com'
 );
 
+const isResendConfigured = !!process.env.RESEND_API_KEY;
+
 // Configuration du transporteur email
 let transporter = null;
 
-if (isEmailConfigured) {
+if (isEmailConfigured && !isResendConfigured) {
   transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: process.env.EMAIL_PORT || 587,
@@ -31,11 +33,63 @@ if (isEmailConfigured) {
     }
   });
 } else {
-  console.warn('⚠️  Service Email désactivé (clés non configurées)');
+  if (isResendConfigured) {
+    console.log('✅ Service email configuré via Resend');
+  } else {
+    console.warn('⚠️  Service Email désactivé (clés non configurées)');
+  }
 }
 
+const sendEmailViaResend = async (mailOptions) => {
+  const from = mailOptions.from || process.env.EMAIL_FROM;
+  if (!from) {
+    return { success: false, error: 'EMAIL_FROM manquant' };
+  }
+
+  const payload = {
+    from,
+    to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
+    subject: mailOptions.subject,
+    html: mailOptions.html,
+    text: mailOptions.text
+  };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = data?.message || `HTTP ${response.status}`;
+      return { success: false, error: message };
+    }
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    return { success: false, error: error.message || 'Erreur Resend' };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
 // Fonction helper pour envoyer un email
 const sendEmail = async (mailOptions) => {
+  if (isResendConfigured) {
+    const result = await sendEmailViaResend(mailOptions);
+    if (result.success) {
+      console.log('✅ Email envoyé (Resend):', result.messageId);
+    } else {
+      console.error('❌ Erreur envoi email (Resend):', result.error);
+    }
+    return result;
+  }
+
   if (!transporter) {
     console.warn('📧 Email non envoyé (service désactivé):', mailOptions.subject);
     return { success: false, error: 'Service email non configuré' };
@@ -286,3 +340,8 @@ const emailService = {
 };
 
 module.exports = emailService;
+
+
+
+
+
