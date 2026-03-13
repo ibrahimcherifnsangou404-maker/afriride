@@ -35,4 +35,15 @@ const sendSMS = async (to, message) => {
   }
 };
 
-module.exports = { sendSMS, twilioClient };
+const sendBookingConfirmationSMS = async (to, vehicleLabel, bookingId) => {
+  if (!to) {
+    console.warn('SMS non envoyé : numéro de téléphone manquant');
+    return null;
+  }
+  const label = vehicleLabel || 'véhicule';
+  const message = 'Votre réservation pour ' + label + ' est confirmée. ID: ' + bookingId;
+  return sendSMS(to, message);
+};
+
+module.exports = { sendSMS, sendBookingConfirmationSMS, twilioClient };
+
