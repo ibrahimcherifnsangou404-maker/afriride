@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import { authService } from '../services/api';
 
 export const AuthContext = createContext();
@@ -13,6 +13,26 @@ export const AuthProvider = ({ children }) => {
     return authService.getCurrentUser();
   });
   const loading = false;
+
+  const refreshUser = async () => {
+    try {
+      const profileResponse = await authService.getProfile();
+      const profile = profileResponse?.data;
+      if (profile) {
+        localStorage.setItem('user', JSON.stringify(profile));
+        setUser(profile);
+      }
+      return profile || null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    refreshUser();
+  }, []);
 
   const register = async (userData) => {
     try {
@@ -33,6 +53,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(credentials);
       const currentUser = authService.getCurrentUser();
       setUser(currentUser);
+      refreshUser();
       return { success: true, data: response.data };
     } catch (error) {
       return {
@@ -62,6 +83,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     setToken,
+    refreshUser,
     isAuthenticated: !!user && !!localStorage.getItem('token')
   };
 

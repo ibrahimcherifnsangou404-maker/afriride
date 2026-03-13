@@ -1,19 +1,6 @@
-const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
 
-const uploadDir = path.join('uploads', 'messages');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `msg-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (_req, file, cb) => {
   const allowedTypes = [

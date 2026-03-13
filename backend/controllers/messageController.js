@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { Conversation, Message, User, Agency, MessageReport, UserBlock } = require('../models');
 const { getSocketServer } = require('../services/socketService');
+const { uploadMessageAttachment } = require('../services/cloudinaryService');
 const { isUserOnline } = require('../services/presenceService');
 
 const SEND_RATE_LIMIT_WINDOW_MS = 10 * 1000;
@@ -622,11 +623,24 @@ const sendMessage = async (req, res) => {
     }
     const deliveredAt = isUserOnline(recipientId) ? new Date() : null;
 
+    let uploadedAttachment = null;
+    if (attachment) {
+      try {
+        uploadedAttachment = await uploadMessageAttachment(attachment);
+      } catch (err) {
+        console.error('Erreur upload Cloudinary:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Erreur lors de l upload du fichier'
+        });
+      }
+    }
+
     const message = await Message.create({
       conversationId: conversation.id,
       senderId: req.user.id,
       content: content || null,
-      attachmentUrl: attachment ? `/uploads/messages/${attachment.filename}` : null,
+      attachmentUrl: uploadedAttachment ? uploadedAttachment.secure_url : null,
       attachmentName: attachment ? attachment.originalname : null,
       attachmentType: attachment ? attachment.mimetype : null,
       attachmentSize: attachment ? attachment.size : null,

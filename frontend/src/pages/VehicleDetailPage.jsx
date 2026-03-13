@@ -18,7 +18,7 @@ import { API_BASE_URL } from '../services/api';
 function VehicleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useContext(AuthContext);
+  const { isAuthenticated, user, refreshUser } = useContext(AuthContext);
 
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -264,9 +264,12 @@ function VehicleDetailPage() {
     }
 
     if (user?.role === 'client' && user?.verificationStatus !== 'verified') {
-      setBookingError('Votre identite doit etre verifiee avant de reserver un vehicule.');
-      setRequiresKyc(true);
-      return;
+      const refreshedUser = await refreshUser?.();
+      if (refreshedUser?.role === 'client' && refreshedUser?.verificationStatus !== 'verified') {
+        setBookingError('Votre identite doit etre verifiee avant de reserver un vehicule.');
+        setRequiresKyc(true);
+        return;
+      }
     }
 
     if (!bookingData.startDate || !bookingData.endDate) {
