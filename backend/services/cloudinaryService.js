@@ -1,4 +1,6 @@
 const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+const path = require('path');
 
 let configured = false;
 
@@ -16,10 +18,31 @@ const ensureConfigured = () => {
   configured = true;
 };
 
+const ensureLocalUploadDir = () => {
+  const dir = path.join('uploads', 'messages');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+};
+
+const saveToLocal = async (file) => {
+  const dir = ensureLocalUploadDir();
+  const ext = path.extname(file.originalname || '');
+  const name = `msg-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+  const filePath = path.join(dir, name);
+  await fs.promises.writeFile(filePath, file.buffer);
+  return { secure_url: `/uploads/messages/${name}`, local: true };
+};
+
 const uploadMessageAttachment = (file) => new Promise((resolve, reject) => {
   try {
     ensureConfigured();
   } catch (err) {
+    if (String(err?.message || '').includes('Cloudinary config missing')) {
+      console.warn('Cloudinary non configuré, sauvegarde locale du message.');
+      return saveToLocal(file).then(resolve).catch(reject);
+    }
     return reject(err);
   }
 
