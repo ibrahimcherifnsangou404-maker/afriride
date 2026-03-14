@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { User } = require('../models');
 const emailService = require('../services/emailService');
 
@@ -9,6 +10,9 @@ const generateToken = (id) => {
     expiresIn: process.env.JWT_EXPIRE
   });
 };
+
+const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
 // @desc    Inscription d'un nouveau client
 // @route   POST /api/auth/register
@@ -218,6 +222,91 @@ const login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la connexion',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Connexion via Google (ID token)
+// @route   POST /api/auth/google
+// @access  Public
+const googleLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token Google manquant'
+      });
+    }
+
+    if (!googleClient) {
+      return res.status(500).json({
+        success: false,
+        message: 'Google client non configuré'
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: googleClientId
+    });
+    const payload = ticket.getPayload() || {};
+
+    const email = payload.email;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email Google manquant'
+      });
+    }
+
+    let user = await User.findOne({ where: { email } });
+    if (!user) {
+      const randomPassword = crypto.randomBytes(24).toString('hex');
+      user = await User.create({
+        firstName: payload.given_name || 'Utilisateur',
+        lastName: payload.family_name || 'Google',
+        email,
+        phone: 'N/A',
+        password: randomPassword,
+        role: 'client',
+        isVerified: true,
+        verificationStatus: 'unverified',
+        profilePicture: payload.picture || null
+      });
+    } else {
+      const updates = {};
+      if (!user.firstName && payload.given_name) updates.firstName = payload.given_name;
+      if (!user.lastName && payload.family_name) updates.lastName = payload.family_name;
+      if (!user.profilePicture && payload.picture) updates.profilePicture = payload.picture;
+      if (user.isVerified !== true) updates.isVerified = true;
+      if (Object.keys(updates).length > 0) {
+        await user.update(updates);
+      }
+    }
+
+    const token = generateToken(user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Connexion Google réussie',
+      data: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        verificationStatus: user.verificationStatus,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Erreur connexion Google:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la connexion Google',
       error: error.message
     });
   }
@@ -519,6 +608,7 @@ module.exports = {
   register,
   login,
   getMe,
+  googleLogin,
   updateProfile,
   forgotPassword,
   resetPassword,

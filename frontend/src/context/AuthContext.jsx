@@ -63,6 +63,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (idToken) => {
+    try {
+      const response = await authService.googleLogin(idToken);
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+      refreshUser();
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erreur lors de la connexion Google'
+      };
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -81,6 +96,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     register,
     login,
+    googleLogin,
     logout,
     setToken,
     refreshUser,

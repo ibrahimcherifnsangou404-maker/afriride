@@ -56,6 +56,16 @@ export const authService = {
     return response.data;
   },
 
+  // Connexion Google
+  googleLogin: async (idToken) => {
+    const response = await api.post('/auth/google', { idToken });
+    if (response.data.success && response.data.data.token) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data));
+    }
+    return response.data;
+  },
+
   // Déconnexion
   logout: () => {
     localStorage.removeItem('token');
