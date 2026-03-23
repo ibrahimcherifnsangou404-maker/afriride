@@ -1,6 +1,6 @@
-﻿import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, Upload, X, AlertCircle } from 'lucide-react';
+import { Upload, X, AlertCircle } from 'lucide-react';
 import { vehicleService } from '../../services/vehicleService';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
@@ -13,7 +13,6 @@ function AddVehicle() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
   const [formData, setFormData] = useState({
     brand: '',
     model: '',
@@ -27,7 +26,6 @@ function AddVehicle() {
     categoryId: '',
     features: []
   });
-
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [featureInput, setFeatureInput] = useState('');
@@ -45,10 +43,10 @@ function AddVehicle() {
       const response = await vehicleService.getCategories();
       setCategories(response.data);
       if (response.data.length > 0) {
-        setFormData(prev => ({ ...prev, categoryId: response.data[0].id }));
+        setFormData((prev) => ({ ...prev, categoryId: response.data[0].id }));
       }
     } catch (error) {
-      console.error('Erreur chargement catégories:', error);
+      console.error('Erreur chargement categories:', error);
     }
   };
 
@@ -62,32 +60,31 @@ function AddVehicle() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    
+
     if (images.length + files.length > 5) {
       setError('Vous pouvez ajouter maximum 5 images');
       return;
     }
 
-    setImages(prev => [...prev, ...files]);
+    setImages((prev) => [...prev, ...files]);
 
-    // Créer les aperçus
-    files.forEach(file => {
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreviews(prev => [...prev, reader.result]);
+        setImagePreviews((prev) => [...prev, reader.result]);
       };
       reader.readAsDataURL(file);
     });
   };
 
   const removeImage = (index) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addFeature = () => {
     if (featureInput.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         features: [...prev.features, featureInput.trim()]
       }));
@@ -96,7 +93,7 @@ function AddVehicle() {
   };
 
   const removeFeature = (index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       features: prev.features.filter((_, i) => i !== index)
     }));
@@ -107,7 +104,6 @@ function AddVehicle() {
     setError('');
     setSuccess('');
 
-    // Validation
     if (!formData.brand || !formData.model || !formData.licensePlate || !formData.pricePerDay) {
       setError('Veuillez remplir tous les champs obligatoires');
       return;
@@ -120,12 +116,9 @@ function AddVehicle() {
 
     try {
       setLoading(true);
-
-      // Créer FormData pour l'upload
       const submitData = new FormData();
-      
-      // Ajouter les champs
-      Object.keys(formData).forEach(key => {
+
+      Object.keys(formData).forEach((key) => {
         if (key === 'features') {
           submitData.append(key, JSON.stringify(formData[key]));
         } else {
@@ -133,27 +126,23 @@ function AddVehicle() {
         }
       });
 
-      // Ajouter les images
-      images.forEach(image => {
+      images.forEach((image) => {
         submitData.append('images', image);
       });
 
-      // Envoyer au backend
       const response = await api.post('/vehicles', submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (response.data.success) {
-        setSuccess('Véhicule ajouté avec succès !');
+        setSuccess('Vehicule ajoute avec succes !');
         setTimeout(() => {
           navigate('/manager/vehicles');
         }, 2000);
       }
     } catch (error) {
-      console.error('Erreur ajout véhicule:', error);
-      setError(error.response?.data?.message || 'Erreur lors de l\'ajout du véhicule');
+      console.error('Erreur ajout vehicule:', error);
+      setError(error.response?.data?.message || "Erreur lors de l'ajout du vehicule");
     } finally {
       setLoading(false);
     }
@@ -161,15 +150,13 @@ function AddVehicle() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Contenu */}
       <div className="container mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Ajouter un véhicule</h1>
-            <p className="text-gray-600">Remplissez les informations du nouveau véhicule</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Ajouter un vehicule</h1>
+            <p className="text-gray-600">Remplissez les informations du nouveau vehicule</p>
           </div>
 
-          {/* Messages */}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
               <AlertCircle className="w-5 h-5 mr-2" />
@@ -183,14 +170,12 @@ function AddVehicle() {
             </div>
           )}
 
-          {/* Formulaire */}
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6">
-            {/* Images */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Photos du véhicule * (Max 5)
+                Photos du vehicule * (Max 5)
               </label>
-              
+
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <input
                   type="file"
@@ -211,18 +196,19 @@ function AddVehicle() {
                   Choisir des images
                 </label>
                 <p className="text-sm text-gray-500 mt-2">
-                  PNG, JPG ou WEBP (Max 5MB par image)
+                  WEBP recommande, PNG ou JPG acceptes (Max 5MB par image)
                 </p>
               </div>
 
-              {/* Aperçus des images */}
               {imagePreviews.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative">
                       <img
                         src={preview}
-                        alt={`Aperçu ${index + 1}`}
+                        alt={`Apercu ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-32 object-cover rounded-lg"
                       />
                       <button
@@ -238,12 +224,9 @@ function AddVehicle() {
               )}
             </div>
 
-            {/* Informations de base */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Marque *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Marque *</label>
                 <input
                   type="text"
                   name="brand"
@@ -256,9 +239,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Modèle *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Modele *</label>
                 <input
                   type="text"
                   name="model"
@@ -271,9 +252,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Année *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Annee *</label>
                 <input
                   type="number"
                   name="year"
@@ -302,9 +281,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Couleur
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Couleur</label>
                 <input
                   type="text"
                   name="color"
@@ -316,9 +293,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre de places *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de places *</label>
                 <input
                   type="number"
                   name="seats"
@@ -332,9 +307,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Transmission *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Transmission *</label>
                 <select
                   name="transmission"
                   value={formData.transmission}
@@ -347,9 +320,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de carburant *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type de carburant *</label>
                 <select
                   name="fuelType"
                   value={formData.fuelType}
@@ -358,15 +329,13 @@ function AddVehicle() {
                 >
                   <option value="petrol">Essence</option>
                   <option value="diesel">Diesel</option>
-                  <option value="electric">Électrique</option>
+                  <option value="electric">Electrique</option>
                   <option value="hybrid">Hybride</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Prix par jour (FCFA) *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Prix par jour (FCFA) *</label>
                 <input
                   type="number"
                   name="pricePerDay"
@@ -380,9 +349,7 @@ function AddVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catégorie *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Categorie *</label>
                 <select
                   name="categoryId"
                   value={formData.categoryId}
@@ -399,11 +366,8 @@ function AddVehicle() {
               </div>
             </div>
 
-            {/* Équipements */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Équipements
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Equipements</label>
               <div className="flex gap-2 mb-3">
                 <input
                   type="text"
@@ -443,14 +407,13 @@ function AddVehicle() {
               )}
             </div>
 
-            {/* Boutons */}
             <div className="flex gap-4">
               <button
                 type="submit"
                 disabled={loading}
                 className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-green-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Ajout en cours...' : 'Ajouter le véhicule'}
+                {loading ? 'Ajout en cours...' : 'Ajouter le vehicule'}
               </button>
               <Link
                 to="/manager/vehicles"

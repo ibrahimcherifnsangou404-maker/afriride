@@ -169,7 +169,13 @@ function KYCPage() {
                                                     <p className="text-sm text-slate-600">{files.idCardFront?.name || 'Document PDF'}</p>
                                                 </div>
                                             ) : (
-                                            <img src={previews.idCardFront} alt="ID Recto" className="w-full h-full object-cover" />
+                                            <img
+                                                src={previews.idCardFront}
+                                                alt="ID Recto"
+                                                loading="lazy"
+                                                decoding="async"
+                                                className="w-full h-full object-cover"
+                                            />
                                             )
                                         ) : (
                                             <div className="text-center p-6">
@@ -201,7 +207,13 @@ function KYCPage() {
                                                     <p className="text-sm text-slate-600">{files.idCardBack?.name || 'Document PDF'}</p>
                                                 </div>
                                             ) : (
-                                            <img src={previews.idCardBack} alt="ID Verso" className="w-full h-full object-cover" />
+                                            <img
+                                                src={previews.idCardBack}
+                                                alt="ID Verso"
+                                                loading="lazy"
+                                                decoding="async"
+                                                className="w-full h-full object-cover"
+                                            />
                                             )
                                         ) : (
                                             <div className="text-center p-6">
@@ -233,7 +245,13 @@ function KYCPage() {
                                                     <p className="text-sm text-slate-600">{files.drivingLicense?.name || 'Document PDF'}</p>
                                                 </div>
                                             ) : (
-                                            <img src={previews.drivingLicense} alt="Permis" className="w-full h-full object-cover" />
+                                            <img
+                                                src={previews.drivingLicense}
+                                                alt="Permis"
+                                                loading="lazy"
+                                                decoding="async"
+                                                className="w-full h-full object-cover"
+                                            />
                                             )
                                         ) : (
                                             <div className="text-center p-6">

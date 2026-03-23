@@ -252,7 +252,9 @@ function MyBookingsPage() {
                       {booking.vehicle.images?.[0] ? (
                         <img
                           src={getImageUrl(booking.vehicle.images[0])}
-                          alt="Vehicle"
+                          alt={`${booking.vehicle.brand} ${booking.vehicle.model}`}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                       ) : (

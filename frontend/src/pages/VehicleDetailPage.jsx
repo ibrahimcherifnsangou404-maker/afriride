@@ -447,9 +447,10 @@ function VehicleDetailPage() {
                 {images.length > 0 ? (
                   <img
                     src={images[selectedImage]}
-                    alt="Vue principale"
+                    alt={`${vehicle.brand} ${vehicle.model}`}
                     loading="eager"
                     decoding="async"
+                    fetchPriority="high"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (
@@ -495,7 +496,13 @@ function VehicleDetailPage() {
                         : 'opacity-60 hover:opacity-100'
                         }`}
                     >
-                      <img src={img} alt={`Miniature ${idx}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      <img
+                        src={img}
+                        alt={`${vehicle.brand} ${vehicle.model} - vue ${idx + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover"
+                      />
                     </button>
                   ))}
                 </div>

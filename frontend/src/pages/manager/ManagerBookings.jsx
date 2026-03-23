@@ -1,9 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Car, Calendar, Phone, Mail, CheckCircle, XCircle,
-  Search, ArrowRight
-} from 'lucide-react';
+import { Car, Phone, Mail, CheckCircle, XCircle, Search, ArrowRight } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { contractService } from '../../services/contractService';
 import { AuthContext } from '../../context/AuthContext';
@@ -49,17 +46,19 @@ export default function ManagerBookings() {
       });
 
       setBookings(response.data || []);
-      setPagination(response.pagination || {
-        page: pagination.page,
-        limit: pagination.limit,
-        totalItems: (response.data || []).length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: pagination.page > 1
-      });
+      setPagination(
+        response.pagination || {
+          page: pagination.page,
+          limit: pagination.limit,
+          totalItems: (response.data || []).length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: pagination.page > 1
+        }
+      );
     } catch (error) {
-      console.error('Erreur chargement réservations:', error);
-      addToast('Erreur lors du chargement des réservations', 'error');
+      console.error('Erreur chargement reservations:', error);
+      addToast('Erreur lors du chargement des reservations', 'error');
     } finally {
       setLoading(false);
     }
@@ -94,9 +93,7 @@ export default function ManagerBookings() {
   }, [filter, debouncedSearch]);
 
   useEffect(() => {
-    if (!isAuthenticated || (user?.role !== 'manager' && user?.role !== 'admin')) {
-      return;
-    }
+    if (!isAuthenticated || (user?.role !== 'manager' && user?.role !== 'admin')) return;
     loadBookings();
   }, [isAuthenticated, user, loadBookings]);
 
@@ -111,11 +108,11 @@ export default function ManagerBookings() {
             : await managerService.rejectBooking(bookingId);
 
       if (response.success) {
-        addToast('Statut mis à jour avec succès', 'success');
+        addToast('Statut mis a jour avec succes', 'success');
         loadBookings();
       }
     } catch (error) {
-      addToast(error?.response?.data?.message || 'Erreur lors de la mise à jour', 'error');
+      addToast(error?.response?.data?.message || 'Erreur lors de la mise a jour', 'error');
     }
   };
 
@@ -126,7 +123,7 @@ export default function ManagerBookings() {
       const contracts = response?.data?.data || [];
 
       if (!contracts.length) {
-        addToast('Aucun contrat trouvé pour cette réservation', 'error');
+        addToast('Aucun contrat trouve pour cette reservation', 'error');
         return;
       }
 
@@ -140,14 +137,16 @@ export default function ManagerBookings() {
   };
 
   const handleApprovalAction = async (approvalId, action) => {
-    const note = window.prompt(action === 'approve' ? 'Note (optionnelle) approbation:' : 'Motif de rejet (optionnel):') || '';
+    const note = window.prompt(
+      action === 'approve' ? 'Note (optionnelle) approbation:' : 'Motif de rejet (optionnel):'
+    ) || '';
     try {
       if (action === 'approve') {
         await managerService.approveRequest(approvalId, note);
       } else {
         await managerService.rejectRequest(approvalId, note);
       }
-      addToast('Demande traitée avec succès', 'success');
+      addToast('Demande traitee avec succes', 'success');
       loadApprovals();
       loadBookings();
     } catch (error) {
@@ -174,19 +173,29 @@ export default function ManagerBookings() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Réservations</h1>
-            <p className="text-slate-500 font-medium">Gérez et suivez toutes les locations ({pagination.totalItems})</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Reservations</h1>
+            <p className="text-slate-500 font-medium">
+              Gerez et suivez toutes les locations ({pagination.totalItems})
+            </p>
           </div>
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
             {['all', 'pending', 'confirmed', 'in_progress'].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filter === status
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  filter === status
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                }`}
               >
-                {status === 'all' ? 'Toutes' : status === 'pending' ? 'En attente' : status === 'confirmed' ? 'Confirmées' : 'En cours'}
+                {status === 'all'
+                  ? 'Toutes'
+                  : status === 'pending'
+                    ? 'En attente'
+                    : status === 'confirmed'
+                      ? 'Confirmees'
+                      : 'En cours'}
               </button>
             ))}
           </div>
@@ -196,7 +205,7 @@ export default function ManagerBookings() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             type="text"
-            placeholder="Rechercher un client, un véhicule..."
+            placeholder="Rechercher un client, un vehicule..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 shadow-sm text-sm font-medium"
@@ -205,24 +214,42 @@ export default function ManagerBookings() {
 
         {approvals.length > 0 && (
           <div className="bg-white rounded-2xl p-5 border border-amber-200 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Demandes d approbation en attente ({approvals.length})</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              Demandes d approbation en attente ({approvals.length})
+            </h3>
             <div className="space-y-3">
               {approvals.map((approval) => (
-                <div key={approval.id} className="border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div
+                  key={approval.id}
+                  className="border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                >
                   <div>
                     <p className="font-semibold text-slate-900">
-                      {approval.booking?.vehicle?.brand} {approval.booking?.vehicle?.model} - {parseFloat(approval.booking?.totalPrice || 0).toLocaleString()} FCFA
+                      {approval.booking?.vehicle?.brand} {approval.booking?.vehicle?.model} -{' '}
+                      {parseFloat(approval.booking?.totalPrice || 0).toLocaleString()} FCFA
                     </p>
                     <p className="text-sm text-slate-600">
-                      Client: {approval.requester?.firstName} {approval.requester?.lastName} ({approval.requester?.email})
+                      Client: {approval.requester?.firstName} {approval.requester?.lastName} (
+                      {approval.requester?.email})
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
-                      Du {new Date(approval.booking?.startDate).toLocaleDateString()} au {new Date(approval.booking?.endDate).toLocaleDateString()}
+                      Du {new Date(approval.booking?.startDate).toLocaleDateString()} au{' '}
+                      {new Date(approval.booking?.endDate).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleApprovalAction(approval.id, 'approve')} className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700">Approuver</button>
-                    <button onClick={() => handleApprovalAction(approval.id, 'reject')} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700">Rejeter</button>
+                    <button
+                      onClick={() => handleApprovalAction(approval.id, 'approve')}
+                      className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700"
+                    >
+                      Approuver
+                    </button>
+                    <button
+                      onClick={() => handleApprovalAction(approval.id, 'reject')}
+                      className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700"
+                    >
+                      Rejeter
+                    </button>
                   </div>
                 </div>
               ))}
@@ -237,19 +264,34 @@ export default function ManagerBookings() {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_4px_20px_-1px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all group">
+              <div
+                key={booking.id}
+                className="bg-white rounded-2xl p-6 border border-slate-100 shadow-[0_4px_20px_-1px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all group"
+              >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                   <div className="flex gap-4 min-w-[300px]">
                     <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
                       {booking.vehicle?.images?.[0] ? (
-                        <img src={`${API_BASE_URL}${booking.vehicle.images[0]}`} className="w-full h-full object-cover" alt="" />
+                        <img
+                          src={`${API_BASE_URL}${booking.vehicle.images[0]}`}
+                          alt={`${booking.vehicle?.brand || 'Vehicule'} ${booking.vehicle?.model || ''}`.trim()}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300"><Car className="w-8 h-8" /></div>
+                        <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <Car className="w-8 h-8" />
+                        </div>
                       )}
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 text-lg">{booking.vehicle?.brand} {booking.vehicle?.model}</h3>
-                      <p className="text-slate-500 text-sm font-medium">{booking.vehicle?.year} | {booking.totalDays} jours</p>
+                      <h3 className="font-bold text-slate-900 text-lg">
+                        {booking.vehicle?.brand} {booking.vehicle?.model}
+                      </h3>
+                      <p className="text-slate-500 text-sm font-medium">
+                        {booking.vehicle?.year} | {booking.totalDays} jours
+                      </p>
                     </div>
                   </div>
 
@@ -258,17 +300,23 @@ export default function ManagerBookings() {
                       <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
                         {booking.user?.firstName?.[0]}
                       </div>
-                      <span className="font-bold text-slate-700">{booking.user?.firstName} {booking.user?.lastName}</span>
+                      <span className="font-bold text-slate-700">
+                        {booking.user?.firstName} {booking.user?.lastName}
+                      </span>
                     </div>
                     <div className="flex gap-4 text-xs text-slate-400 font-medium">
-                      <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {booking.user?.phone}</span>
-                      <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {booking.user?.email}</span>
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {booking.user?.phone}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Mail className="w-3 h-3" /> {booking.user?.email}
+                      </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-8 min-w-[200px]">
                     <div className="text-center">
-                      <p className="text-xs font-bold text-slate-400 uppercase">Période</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase">Periode</p>
                       <p className="text-sm font-bold text-slate-700">
                         {new Date(booking.startDate).toLocaleDateString()}
                         <ArrowRight className="inline w-3 h-3 mx-1 text-slate-300" />
@@ -276,7 +324,10 @@ export default function ManagerBookings() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-black text-emerald-600">{parseFloat(booking.totalPrice).toLocaleString()} <span className="text-xs text-emerald-600/60 font-medium">FCFA</span></p>
+                      <p className="text-lg font-black text-emerald-600">
+                        {parseFloat(booking.totalPrice).toLocaleString()}{' '}
+                        <span className="text-xs text-emerald-600/60 font-medium">FCFA</span>
+                      </p>
                     </div>
                   </div>
 
@@ -290,29 +341,51 @@ export default function ManagerBookings() {
                     </button>
                     {booking.status === 'pending' && (
                       <>
-                        <button onClick={() => handleUpdateStatus(booking.id, 'confirmed')} className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors font-bold flex items-center gap-2 text-sm px-4">
+                        <button
+                          onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
+                          className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors font-bold flex items-center gap-2 text-sm px-4"
+                        >
                           <CheckCircle className="w-4 h-4" /> Valider
                         </button>
-                        <button onClick={() => handleUpdateStatus(booking.id, 'cancelled')} className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors" title="Refuser">
+                        <button
+                          onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
+                          className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+                          title="Refuser"
+                        >
                           <XCircle className="w-5 h-5" />
                         </button>
                       </>
                     )}
                     {(booking.status === 'confirmed' || booking.status === 'in_progress') && (
-                      <button onClick={() => handleUpdateStatus(booking.id, 'completed')} className="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-bold flex items-center gap-2 text-sm px-4">
+                      <button
+                        onClick={() => handleUpdateStatus(booking.id, 'completed')}
+                        className="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-bold flex items-center gap-2 text-sm px-4"
+                      >
                         <CheckCircle className="w-4 h-4" /> Terminer
                       </button>
                     )}
-                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold ${booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                      booking.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                        booking.status === 'in_progress' ? 'bg-emerald-100 text-emerald-700' :
-                          booking.status === 'completed' ? 'bg-slate-100 text-slate-600' :
-                            'bg-red-100 text-red-700'
-                      }`}>
-                      {booking.status === 'pending' ? 'En attente' :
-                        booking.status === 'confirmed' ? 'Confirmée' :
-                          booking.status === 'in_progress' ? 'En cours' :
-                            booking.status === 'completed' ? 'Terminée' : 'Annulée'}
+                    <div
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold ${
+                        booking.status === 'pending'
+                          ? 'bg-amber-100 text-amber-700'
+                          : booking.status === 'confirmed'
+                            ? 'bg-blue-100 text-blue-700'
+                            : booking.status === 'in_progress'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : booking.status === 'completed'
+                                ? 'bg-slate-100 text-slate-600'
+                                : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {booking.status === 'pending'
+                        ? 'En attente'
+                        : booking.status === 'confirmed'
+                          ? 'Confirmee'
+                          : booking.status === 'in_progress'
+                            ? 'En cours'
+                            : booking.status === 'completed'
+                              ? 'Terminee'
+                              : 'Annulee'}
                     </div>
                   </div>
                 </div>
@@ -326,9 +399,11 @@ export default function ManagerBookings() {
                   disabled={!pagination.hasPrevPage || loading}
                   className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Précédent
+                  Precedent
                 </button>
-                <span className="text-sm font-semibold text-slate-700">Page {pagination.page} / {pagination.totalPages}</span>
+                <span className="text-sm font-semibold text-slate-700">
+                  Page {pagination.page} / {pagination.totalPages}
+                </span>
                 <button
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={!pagination.hasNextPage || loading}
@@ -344,4 +419,3 @@ export default function ManagerBookings() {
     </div>
   );
 }
-

@@ -146,6 +146,8 @@ function ManagerKYC() {
                                                 <img
                                                     src={`${API_BASE_URL}${selectedUser[doc.field]}`}
                                                     alt={doc.label}
+                                                    loading="lazy"
+                                                    decoding="async"
                                                     className="w-full h-full object-cover"
                                                 />
                                             )
