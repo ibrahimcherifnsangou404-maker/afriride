@@ -160,7 +160,7 @@ export function Loading({ size = 'md', className = '' }) {
 
 export function Skeleton({ className = '' }) {
   return (
-    <div aria-hidden="true" className={`animate-pulse rounded-lg bg-slate-200/80 ${className}`}></div>
+    <div aria-hidden="true" className={`skeleton rounded-lg bg-slate-200/80 ${className}`}></div>
   );
 }
 

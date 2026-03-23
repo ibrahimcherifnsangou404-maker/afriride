@@ -6,6 +6,7 @@ import { favoriteService } from '../services/favoriteService';
 import { AuthContext } from '../context/AuthContext';
 import { Card, Button, EmptyState, Skeleton } from '../components/UI';
 import VehicleCard from '../components/VehicleCard';
+import VehicleCardSkeleton from '../components/VehicleCardSkeleton';
 
 function VehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
@@ -160,6 +161,7 @@ function VehiclesPage() {
   }), [vehicles, sortBy]);
 
   const activeChips = useMemo(() => getActiveFilterChips(), [filters, categories, agencies]);
+  const vehicleSkeletons = useMemo(() => Array.from({ length: pagination.limit || 6 }), [pagination.limit]);
 
   const handleFavoriteChange = (vehicleId, isFavorite) => {
     setFavoriteIds((prev) => {
@@ -338,12 +340,9 @@ function VehiclesPage() {
                 <Skeleton className="h-10 w-44" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <Skeleton className="h-44 w-full rounded-xl" />
-                    <Skeleton className="h-6 w-3/4 mt-4" />
-                    <Skeleton className="h-4 w-1/2 mt-2" />
-                    <Skeleton className="h-10 w-full mt-6 rounded-xl" />
+                {vehicleSkeletons.map((_, index) => (
+                  <div key={index} className="h-full">
+                    <VehicleCardSkeleton />
                   </div>
                 ))}
               </div>
