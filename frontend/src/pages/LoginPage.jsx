@@ -18,8 +18,6 @@ import logo from '../assets/afriride-logo.png';
 function LoginPage() {
   const navigate = useNavigate();
   const { login, googleLogin } = useContext(AuthContext);
-  const shouldShowEmailCodeCta = error.toLowerCase().includes('vérifier votre email')
-    || error.toLowerCase().includes('verifier votre email');
 
   const [formData, setFormData] = useState({
     email: '',
@@ -37,6 +35,8 @@ function LoginPage() {
   const [googleError, setGoogleError] = useState('');
   const googleBtnRef = useRef(null);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const shouldShowEmailCodeCta = error.toLowerCase().includes('vérifier votre email')
+    || error.toLowerCase().includes('verifier votre email');
 
   useEffect(() => {
     const id = setTimeout(() => setMounted(true), 60);
