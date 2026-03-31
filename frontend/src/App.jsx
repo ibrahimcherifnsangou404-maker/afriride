@@ -39,6 +39,8 @@ const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard'));
 const ManagerVehicles  = lazy(() => import('./pages/manager/ManagerVehicles'));
 const ManagerBookings  = lazy(() => import('./pages/manager/ManagerBookings'));
 const ManagerKYC       = lazy(() => import('./pages/manager/ManagerKYC'));
+const ManagerAgencyKYC = lazy(() => import('./pages/manager/ManagerAgencyKYC'));
+const ManagerContractPolicy = lazy(() => import('./pages/manager/ManagerContractPolicy'));
 const ManagerRevenue   = lazy(() => import('./pages/manager/ManagerRevenue'));
 const AddVehicle       = lazy(() => import('./pages/manager/AddVehicle'));
 const EditVehicle      = lazy(() => import('./pages/manager/EditVehicle'));
@@ -46,6 +48,7 @@ const EditVehicle      = lazy(() => import('./pages/manager/EditVehicle'));
 // ── Admin Pages (lazy loaded) ────────────────────────────────────────────────
 const AdminDashboard      = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminAgencies       = lazy(() => import('./pages/admin/AdminAgencies'));
+const AdminAgencyKyc      = lazy(() => import('./pages/admin/AdminAgencyKyc'));
 const AdminCategories     = lazy(() => import('./pages/admin/AdminCategories'));
 const AdminUsers          = lazy(() => import('./pages/admin/AdminUsers'));
 const CreateManager       = lazy(() => import('./pages/admin/CreateManager'));
@@ -65,6 +68,7 @@ function AppRoutes() {
           <Route path="/"                        element={<HomePage />} />
           <Route path="/register"                element={<RegisterPage />} />
           <Route path="/login"                   element={<LoginPage />} />
+          <Route path="/confirm-email"           element={<EmailConfirmationPage />} />
           <Route path="/confirm-email/:token"    element={<EmailConfirmationPage />} />
           <Route path="/partner-signup"          element={<PartnerSignupPage />} />
           <Route path="/conditions-utilisation"  element={<TermsPage />} />
@@ -159,6 +163,16 @@ function AppRoutes() {
               <ManagerRevenue />
             </ProtectedRoute>
           }/>
+          <Route path="/manager/agency-kyc" element={
+            <ProtectedRoute allowedRoles={['manager', 'admin']}>
+              <ManagerAgencyKYC />
+            </ProtectedRoute>
+          }/>
+          <Route path="/manager/contract-policy" element={
+            <ProtectedRoute allowedRoles={['manager', 'admin']}>
+              <ManagerContractPolicy />
+            </ProtectedRoute>
+          }/>
 
           {/* Routes Admin */}
           <Route path="/admin/dashboard" element={
@@ -169,6 +183,11 @@ function AppRoutes() {
           <Route path="/admin/agencies" element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminAgencies />
+            </ProtectedRoute>
+          }/>
+          <Route path="/admin/agencies/kyc" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminAgencyKyc />
             </ProtectedRoute>
           }/>
           <Route path="/admin/categories" element={

@@ -168,11 +168,15 @@ function PartnerSignupPage() {
         throw new Error(partnerResponse.message || 'Erreur lors de l\'inscription partenaire');
       }
 
-      setSuccess('œ… Inscription réussie!');
+      setSuccess('Inscription reussie. Un code de verification a ete envoye au manager.');
       setCurrentStep(3);
       
       setTimeout(() => {
-        navigate('/login');
+        navigate('/confirm-email', {
+          state: {
+            email: formData.managerEmail.trim().toLowerCase()
+          }
+        });
       }, 3000);
     } catch (err) {
       console.error('Erreur inscription partenaire:', err);
@@ -647,14 +651,18 @@ function PartnerSignupPage() {
                     Bienvenue sur AfriRide!
                   </h2>
                   <p className="text-lg text-slate-600 mb-8">
-                    Votre agence a été inscrite avec succès. Vérification en cours...
+                    Votre agence a ete inscrite avec succes. Le manager doit maintenant valider son email avec le code recu.
                   </p>
 
                   <button
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate('/confirm-email', {
+                      state: {
+                        email: formData.managerEmail.trim().toLowerCase()
+                      }
+                    })}
                     className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all"
                   >
-                    Aller à la connexion
+                    Verifier l'email du manager
                   </button>
                 </div>
               )}

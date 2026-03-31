@@ -8,7 +8,9 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
-  confirmEmail
+  confirmEmail,
+  verifyEmailCode,
+  resendEmailCode
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
@@ -16,6 +18,8 @@ const { protect } = require('../middleware/auth');
 router.post('/register', register);
 router.post('/login', login);
 router.post('/google', googleLogin);
+router.post('/confirm-email-code', verifyEmailCode);
+router.post('/resend-email-code', resendEmailCode);
 router.post('/forgot-password', forgotPassword);
 router.put('/reset-password/:token', resetPassword);
 router.get('/confirm-email/:token', confirmEmail);

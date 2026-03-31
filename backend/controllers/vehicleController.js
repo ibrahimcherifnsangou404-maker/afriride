@@ -1,5 +1,8 @@
 ﻿const { Vehicle, Agency, Category, Booking } = require('../models');
 const { Op } = require('sequelize');
+const { getPendingThresholdDate } = require('../services/bookingAvailabilityService');
+
+const isAgencyVerified = (agency) => agency?.verificationStatus === 'verified';
 
 // @desc    RÃ©cupÃ©rer tous les vÃ©hicules avec filtres
 // @route   GET /api/vehicles
@@ -79,19 +82,32 @@ const getVehicles = async (req, res) => {
         });
       }
 
-      // Trouver les rÃ©servations qui chevauchent la pÃ©riode demandÃ©e
-      // Chevauchement: booking.startDate <= requestedEnd AND booking.endDate >= requestedStart
+      const pendingThreshold = getPendingThresholdDate();
+
+      // Trouver les rÃ©servations qui chevauchent la pÃ©riode demandÃ©e.
+      // On utilise des intervalles semi-ouverts pour autoriser les reservations consecutives.
       const overlappingBookings = await Booking.findAll({
         where: {
-          status: {
-            [Op.in]: ['pending', 'confirmed', 'in_progress']
-          },
           startDate: {
-            [Op.lte]: requestedEnd
+            [Op.lt]: requestedEnd
           },
           endDate: {
-            [Op.gte]: requestedStart
-          }
+            [Op.gt]: requestedStart
+          },
+          [Op.or]: [
+            {
+              status: {
+                [Op.in]: ['confirmed', 'in_progress']
+              }
+            },
+            {
+              status: 'pending',
+              paymentStatus: 'pending',
+              createdAt: {
+                [Op.gte]: pendingThreshold
+              }
+            }
+          ]
         },
         attributes: ['vehicleId']
       });
@@ -114,7 +130,8 @@ const getVehicles = async (req, res) => {
         {
           model: Agency,
           as: 'agency',
-          attributes: ['id', 'name', 'phone', 'address']
+          attributes: ['id', 'name', 'phone', 'address'],
+          where: { verificationStatus: 'verified', isActive: true }
         },
         {
           model: Category,
@@ -246,6 +263,14 @@ const createVehicle = async (req, res) => {
       });
     }
 
+    const agency = await Agency.findByPk(agencyId);
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence introuvable'
+      });
+    }
+
     // VÃ©rifier que la plaque d'immatriculation n'existe pas dÃ©jÃ 
     const existingVehicle = await Vehicle.findOne({ where: { licensePlate } });
     if (existingVehicle) {
@@ -284,13 +309,16 @@ const createVehicle = async (req, res) => {
       pricePerDay: parseFloat(pricePerDay),
       images,
       features: featuresArray,
+      isAvailable: isAgencyVerified(agency),
       agencyId,
       categoryId
     });
 
     res.status(201).json({
       success: true,
-      message: 'VÃ©hicule crÃ©Ã© avec succÃ¨s',
+      message: isAgencyVerified(agency)
+        ? 'VÃ©hicule crÃ©Ã© avec succÃ¨s'
+        : 'VÃ©hicule enregistrÃ© en brouillon. La publication sera possible aprÃ¨s validation KYC de l\'agence.',
       data: vehicle
     });
   } catch (error) {
@@ -325,6 +353,14 @@ const updateVehicle = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Vous n\'Ãªtes pas autorisÃ© Ã  modifier ce vÃ©hicule'
+      });
+    }
+
+    const agency = await Agency.findByPk(vehicle.agencyId);
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence introuvable pour ce vÃ©hicule'
       });
     }
 
@@ -376,6 +412,13 @@ const updateVehicle = async (req, res) => {
     }
 
     // Mettre Ã  jour le vÃ©hicule
+    if (isAvailable !== undefined && isAvailable === 'true' && !isAgencyVerified(agency)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Publication impossible tant que l\'agence n\'est pas vÃ©rifiÃ©e'
+      });
+    }
+
     await vehicle.update({
       brand: brand || vehicle.brand,
       model: model || vehicle.model,
@@ -387,7 +430,9 @@ const updateVehicle = async (req, res) => {
       fuelType: fuelType || vehicle.fuelType,
       pricePerDay: pricePerDay ? parseFloat(pricePerDay) : vehicle.pricePerDay,
       categoryId: categoryId || vehicle.categoryId,
-      isAvailable: isAvailable !== undefined ? isAvailable === 'true' : vehicle.isAvailable,
+      isAvailable: isAvailable !== undefined
+        ? (isAvailable === 'true' && isAgencyVerified(agency))
+        : vehicle.isAvailable,
       images: allImages,
       features: featuresArray
     });

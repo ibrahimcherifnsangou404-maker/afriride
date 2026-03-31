@@ -3,6 +3,9 @@ const router = express.Router();
 const {
   getDashboard,
   getAllAgencies,
+  getAgencyKycRequests,
+  approveAgencyKyc,
+  rejectAgencyKyc,
   createAgency,
   updateAgency,
   deleteAgency,
@@ -29,6 +32,9 @@ router.get('/dashboard', getDashboard);
 
 // Agences
 router.get('/agencies', getAllAgencies);
+router.get('/agencies/kyc', getAgencyKycRequests);
+router.put('/agencies/:id/approve-kyc', approveAgencyKyc);
+router.put('/agencies/:id/reject-kyc', rejectAgencyKyc);
 router.post('/agencies', createAgency);
 router.put('/agencies/:id', updateAgency);
 router.delete('/agencies/:id', deleteAgency);

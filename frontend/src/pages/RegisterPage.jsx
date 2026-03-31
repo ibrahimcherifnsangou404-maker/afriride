@@ -6,6 +6,8 @@ import { Footer } from '../components/Layout/Footer';
 import { Card, Button, InputField, Alert } from '../components/UI';
 import logo from '../assets/afriride-logo.png';
 
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
 function RegisterPage() {
   const navigate = useNavigate();
   const { register } = useContext(AuthContext);
@@ -43,7 +45,7 @@ function RegisterPage() {
         setError('Veuillez entrer votre email et téléphone');
         return false;
       }
-      if (!formData.email.includes('@')) {
+      if (!isValidEmail(formData.email)) {
         setError('Veuillez entrer un email valide');
         return false;
       }
@@ -91,7 +93,11 @@ function RegisterPage() {
       });
 
       if (result.success) {
-        navigate('/login');
+        navigate('/confirm-email', {
+          state: {
+            email: formData.email.trim().toLowerCase()
+          }
+        });
       } else {
         setError(result.message || 'Erreur lors de l\'inscription');
       }

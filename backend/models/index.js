@@ -1,3 +1,4 @@
+const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const User = require('./User');
 const Agency = require('./Agency');
@@ -16,6 +17,62 @@ const Message = require('./Message');
 const BookingApproval = require('./BookingApproval');
 const MessageReport = require('./MessageReport');
 const UserBlock = require('./UserBlock');
+
+const ensureAgencyColumns = async () => {
+  const queryInterface = sequelize.getQueryInterface();
+  const table = await queryInterface.describeTable('agencies');
+
+  const missingColumns = [
+    ['city', { type: DataTypes.STRING, allowNull: true }],
+    ['license_number', { type: DataTypes.STRING, allowNull: true }],
+    ['registration_number', { type: DataTypes.STRING, allowNull: true }],
+    ['verification_status', { type: DataTypes.STRING, allowNull: false, defaultValue: 'unverified' }],
+    ['rejection_reason', { type: DataTypes.TEXT, allowNull: true }],
+    ['kyc_documents', { type: DataTypes.JSON, allowNull: true }],
+    ['kyc_submitted_at', { type: DataTypes.DATE, allowNull: true }],
+    ['verified_at', { type: DataTypes.DATE, allowNull: true }],
+    ['contract_country', { type: DataTypes.STRING, allowNull: true }],
+    ['contract_jurisdiction_city', { type: DataTypes.STRING, allowNull: true }],
+    ['default_deposit_amount', { type: DataTypes.STRING, allowNull: true }],
+    ['default_daily_km_limit', { type: DataTypes.STRING, allowNull: true }],
+    ['default_late_fee_per_hour', { type: DataTypes.STRING, allowNull: true }]
+  ];
+
+  for (const [column, definition] of missingColumns) {
+    if (!table[column]) {
+      await queryInterface.addColumn('agencies', column, definition);
+    }
+  }
+
+  const [statusSummary] = await sequelize.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE verification_status = 'verified')::int AS verified,
+      COUNT(*) FILTER (WHERE verification_status = 'pending')::int AS pending,
+      COUNT(*) FILTER (WHERE verification_status = 'rejected')::int AS rejected,
+      COUNT(*) FILTER (WHERE verification_status = 'unverified')::int AS unverified
+    FROM agencies
+  `);
+
+  const summary = Array.isArray(statusSummary) ? statusSummary[0] : statusSummary;
+  const total = Number(summary?.total || 0);
+  const verified = Number(summary?.verified || 0);
+  const pending = Number(summary?.pending || 0);
+  const rejected = Number(summary?.rejected || 0);
+  const unverified = Number(summary?.unverified || 0);
+
+  // Backfill de transition:
+  // si toutes les agences existantes sont "unverified" juste après l'ajout du KYC,
+  // on suppose qu'il s'agit d'agences historiques déjà en exploitation.
+  if (total > 0 && verified === 0 && pending === 0 && rejected === 0 && unverified === total) {
+    await sequelize.query(`
+      UPDATE agencies
+      SET verification_status = 'verified',
+          verified_at = COALESCE(verified_at, NOW())
+      WHERE verification_status = 'unverified'
+    `);
+  }
+};
 
 // Définir les relations entre les modèles
 
@@ -152,6 +209,7 @@ const syncDatabase = async () => {
 
     // Niveau 1 - tables de base (sans foreign keys vers d'autres tables custom)
     await Agency.sync({ alter: false });
+    await ensureAgencyColumns();
     await Category.sync({ alter: false });
     await PromoCode.sync({ alter: false });
 

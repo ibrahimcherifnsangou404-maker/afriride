@@ -13,7 +13,9 @@ import {
   DollarSign,
   Receipt,
   PlusCircle,
-  MessageCircle
+  MessageCircle,
+  ShieldCheck,
+  FileText
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
@@ -36,6 +38,8 @@ export default function ManagerNav() {
   ];
 
   const secondaryNav = [
+    { label: 'KYC agence', icon: ShieldCheck, path: '/manager/agency-kyc' },
+    { label: 'Politique contrat', icon: FileText, path: '/manager/contract-policy' },
     { label: 'Messages', icon: MessageCircle, path: '/messages' },
     { label: 'Revenus', icon: DollarSign, path: '/manager/revenue' },
     { label: 'Factures', icon: Receipt, path: '/invoices' }

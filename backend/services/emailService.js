@@ -139,6 +139,38 @@ const emailService = {
     });
   },
 
+  sendVerificationCodeEmail: async (user, confirmationCode, expiryMinutes = 10) => {
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center; color: white;">
+          <h1>Code de verification email</h1>
+          <p style="font-size: 16px; margin: 0;">AfriRide</p>
+        </div>
+        <div style="padding: 40px; background: #f5f5f5;">
+          <p style="font-size: 16px; color: #333;">Bonjour ${user.firstName},</p>
+          <p>Merci de vous etre inscrit sur AfriRide. Saisissez ce code pour confirmer que cette adresse email vous appartient.</p>
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <div style="font-size: 34px; font-weight: bold; letter-spacing: 8px; color: #111827;">
+              ${confirmationCode}
+            </div>
+          </div>
+          <p style="font-size: 14px; color: #666; text-align: center;">Ce code expire dans ${expiryMinutes} minutes.</p>
+          <p style="font-size: 12px; color: #666; text-align: center;">Si vous n'etes pas a l'origine de cette inscription, ignorez simplement cet email.</p>
+        </div>
+        <div style="background: #333; padding: 20px; text-align: center; color: white;">
+          <p style="margin: 0;">© 2026 AfriRide - Tous droits reserves</p>
+        </div>
+      </div>
+    `;
+
+    return sendEmail({
+      from: process.env.EMAIL_FROM || 'noreply@afriride.com',
+      to: user.email,
+      subject: 'Code de verification AfriRide',
+      html: htmlContent
+    });
+  },
+
   sendWelcomeEmail: async (user) => {
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

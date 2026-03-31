@@ -78,6 +78,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const verifyEmailCode = async ({ email, code }) => {
+    try {
+      const response = await authService.verifyEmailCode({ email, code });
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+      refreshUser();
+      return { success: true, data: response.data, message: response.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erreur lors de la vérification du code'
+      };
+    }
+  };
+
+  const resendEmailCode = async (email) => {
+    try {
+      const response = await authService.resendEmailCode(email);
+      return { success: true, message: response.message };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Erreur lors du renvoi du code'
+      };
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -97,6 +124,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     googleLogin,
+    verifyEmailCode,
+    resendEmailCode,
     logout,
     setToken,
     refreshUser,

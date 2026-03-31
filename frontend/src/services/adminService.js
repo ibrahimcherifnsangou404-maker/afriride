@@ -13,6 +13,21 @@ export const adminService = {
     return response.data;
   },
 
+  getAgencyKycRequests: async (status = 'pending') => {
+    const response = await api.get('/admin/agencies/kyc', { params: { status } });
+    return response.data;
+  },
+
+  approveAgencyKyc: async (agencyId) => {
+    const response = await api.put(`/admin/agencies/${agencyId}/approve-kyc`);
+    return response.data;
+  },
+
+  rejectAgencyKyc: async (agencyId, reason) => {
+    const response = await api.put(`/admin/agencies/${agencyId}/reject-kyc`, { reason });
+    return response.data;
+  },
+
   createAgency: async (agencyData) => {
     const response = await api.post('/admin/agencies', agencyData);
     return response.data;
@@ -52,6 +67,11 @@ export const adminService = {
   // Utilisateurs
   getAllUsers: async () => {
     const response = await api.get('/admin/users');
+    return response.data;
+  },
+
+  createManager: async (payload) => {
+    const response = await api.post('/admin/users/create-manager', payload);
     return response.data;
   },
 

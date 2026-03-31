@@ -60,22 +60,46 @@ const createContract = async (req, res) => {
     }
 
     // Créer le contrat
+    const totalDays = contractGeneratorService.getTotalDays(booking.startDate, booking.endDate);
+    const pricingBreakdown = contractGeneratorService.getPricingBreakdown({ booking, totalDays });
+    const defaultTerms = contractGeneratorService.getRentalTerms({
+      booking,
+      user: booking.user,
+      vehicle: booking.vehicle,
+      agency: booking.vehicle.agency
+    });
+    const defaultPaymentTerms = contractGeneratorService.getPaymentTerms({
+      booking,
+      totalDays,
+      pricingBreakdown
+    });
+    const defaultNotes = contractGeneratorService.getContractNotes({
+      booking,
+      vehicle: booking.vehicle,
+      agency: booking.vehicle.agency
+    });
+
     const contract = await Contract.create({
       contractNumber: generateContractNumber(),
       status: 'draft',
       contractType,
       startDate: booking.startDate,
       endDate: booking.endDate,
-      terms: terms || `Contrat de location de ${booking.vehicle.brand} ${booking.vehicle.model} du ${booking.startDate} au ${booking.endDate}`,
+      terms: terms || defaultTerms,
       paymentTerms: paymentTerms || 'Le paiement doit être effectué avant la prise de possession du véhicule.',
-      totalAmount: booking.totalPrice,
+      totalAmount: booking.finalPrice || booking.totalPrice,
       signatureRequired,
-      notes,
+      notes: notes || defaultNotes,
       bookingId,
       paymentId: paymentId || null,
       userId: booking.userId,
       agencyId: booking.vehicle.agencyId
     });
+
+    if (!paymentTerms && contract.paymentTerms !== defaultPaymentTerms) {
+      contract.paymentTerms = defaultPaymentTerms;
+      await contract.save();
+    }
 
     res.status(201).json({
       success: true,

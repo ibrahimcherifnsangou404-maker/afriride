@@ -3,6 +3,7 @@ const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
 const emailService = require('../services/emailService');
+const pdfService = require('../services/pdfService');
 const { HOLD_MINUTES, getPendingThresholdDate } = require('../services/bookingAvailabilityService');
 
 const generateContractNumber = () => {
@@ -456,6 +457,25 @@ const paymentController = {
         }
         await booking.save({ transaction: t });
 
+        const totalDays = contractGeneratorService.getTotalDays(booking.startDate, booking.endDate);
+        const pricingBreakdown = contractGeneratorService.getPricingBreakdown({ booking, totalDays });
+        const defaultTerms = contractGeneratorService.getRentalTerms({
+          booking,
+          user: booking.user,
+          vehicle: booking.vehicle,
+          agency: booking.vehicle.agency
+        });
+        const defaultPaymentTerms = contractGeneratorService.getPaymentTerms({
+          booking,
+          totalDays,
+          pricingBreakdown
+        });
+        const defaultNotes = contractGeneratorService.getContractNotes({
+          booking,
+          vehicle: booking.vehicle,
+          agency: booking.vehicle.agency
+        });
+
         let contract = null;
         if (isSuccess) {
           const draftQuote = await Contract.findOne({
@@ -473,9 +493,10 @@ const paymentController = {
               contractType: 'rental',
               paymentId: payment.id,
               signatureRequired: true,
-              terms: `Contrat de location confirme pour ${booking.vehicle.brand} ${booking.vehicle.model}`,
-              paymentTerms: 'Paiement effectue en totalite.',
-              notes: 'Converti automatiquement depuis devis pre-paiement.'
+              totalAmount: booking.finalPrice || booking.totalPrice,
+              terms: defaultTerms,
+              paymentTerms: defaultPaymentTerms,
+              notes: defaultNotes
             }, { transaction: t });
             contract = draftQuote;
           } else {
@@ -485,11 +506,11 @@ const paymentController = {
               contractType: 'rental',
               startDate: booking.startDate,
               endDate: booking.endDate,
-              terms: `Contrat de location automatique pour ${booking.vehicle.brand} ${booking.vehicle.model}`,
-              paymentTerms: 'Paiement effectue en totalite.',
-              totalAmount: booking.totalPrice,
+              terms: defaultTerms,
+              paymentTerms: defaultPaymentTerms,
+              totalAmount: booking.finalPrice || booking.totalPrice,
               signatureRequired: true,
-              notes: 'Contrat genere apres paiement (devis introuvable).',
+              notes: defaultNotes,
               bookingId: booking.id,
               paymentId: payment.id,
               userId: booking.userId,
@@ -677,49 +698,10 @@ const paymentController = {
       const agency = vehicle?.agency;
       const user = payment.user;
 
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=AfriRide_Receipt_${payment.id}.pdf`);
-
-      doc.fontSize(20).text('AfriRide - ReÃ§u de paiement', { align: 'center' });
-      doc.moveDown();
-
-      doc.fontSize(12).text(`ReÃ§u ID: ${payment.id}`);
-      doc.text(`Transaction ID: ${payment.transactionId || '-'}`);
-      doc.text(`Statut: ${payment.status}`);
-      doc.text(`Date: ${new Date(payment.createdAt).toLocaleString('fr-FR')}`);
-      doc.moveDown();
-
-      doc.fontSize(14).text('Client', { underline: true });
-      doc.fontSize(12).text(`${user?.firstName || ''} ${user?.lastName || ''}`.trim());
-      doc.text(user?.email || '-');
-      doc.moveDown();
-
-      doc.fontSize(14).text('VÃ©hicule', { underline: true });
-      doc.fontSize(12).text(`${vehicle?.brand || ''} ${vehicle?.model || ''}`.trim());
-      doc.text(`AnnÃ©e: ${vehicle?.year || '-'}`);
-      doc.moveDown();
-
-      doc.fontSize(14).text('RÃ©servation', { underline: true });
-      doc.fontSize(12).text(`Du ${new Date(booking?.startDate).toLocaleDateString('fr-FR')} au ${new Date(booking?.endDate).toLocaleDateString('fr-FR')}`);
-      doc.text(`Total jours: ${booking?.totalDays || '-'}`);
-      doc.moveDown();
-
-      doc.fontSize(14).text('Agence', { underline: true });
-      doc.fontSize(12).text(agency?.name || '-');
-      if (agency?.address) doc.text(agency.address);
-      if (agency?.phone) doc.text(agency.phone);
-      if (agency?.email) doc.text(agency.email);
-      doc.moveDown();
-
-      doc.fontSize(14).text('Montant', { underline: true });
-      doc.fontSize(16).text(`${Number(payment.amount || 0).toLocaleString('fr-FR')} FCFA`, { align: 'left' });
-      doc.moveDown();
-
-      doc.fontSize(10).fillColor('#555').text('Merci pour votre confiance.', { align: 'center' });
-
-      doc.pipe(res);
-      doc.end();
+      const pdfBuffer = await pdfService.generatePaymentReceiptBuffer(payment, booking, vehicle, agency, user);
+      res.end(pdfBuffer);
     } catch (error) {
       console.error('Erreur gÃ©nÃ©ration reÃ§u:', error);
       res.status(500).json({ message: 'Erreur lors de la gÃ©nÃ©ration du reÃ§u' });
@@ -728,55 +710,7 @@ const paymentController = {
 
   // GÃ©nÃ©rer un reÃ§u PDF en buffer (pour email)
   generateReceiptBuffer: async (payment, booking, vehicle, agency, user) => {
-    return new Promise((resolve, reject) => {
-      try {
-        const doc = new PDFDocument({ size: 'A4', margin: 50 });
-        const chunks = [];
-        doc.on('data', (chunk) => chunks.push(chunk));
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
-
-        doc.fontSize(20).text('AfriRide - ReÃ§u de paiement', { align: 'center' });
-        doc.moveDown();
-
-        doc.fontSize(12).text(`ReÃ§u ID: ${payment.id}`);
-        doc.text(`Transaction ID: ${payment.transactionId || '-'}`);
-        doc.text(`Statut: ${payment.status}`);
-        doc.text(`Date: ${new Date(payment.createdAt).toLocaleString('fr-FR')}`);
-        doc.moveDown();
-
-        doc.fontSize(14).text('Client', { underline: true });
-        doc.fontSize(12).text(`${user?.firstName || ''} ${user?.lastName || ''}`.trim());
-        doc.text(user?.email || '-');
-        doc.moveDown();
-
-        doc.fontSize(14).text('VÃ©hicule', { underline: true });
-        doc.fontSize(12).text(`${vehicle?.brand || ''} ${vehicle?.model || ''}`.trim());
-        doc.text(`AnnÃ©e: ${vehicle?.year || '-'}`);
-        doc.moveDown();
-
-        doc.fontSize(14).text('RÃ©servation', { underline: true });
-        doc.fontSize(12).text(`Du ${new Date(booking?.startDate).toLocaleDateString('fr-FR')} au ${new Date(booking?.endDate).toLocaleDateString('fr-FR')}`);
-        doc.text(`Total jours: ${booking?.totalDays || '-'}`);
-        doc.moveDown();
-
-        doc.fontSize(14).text('Agence', { underline: true });
-        doc.fontSize(12).text(agency?.name || '-');
-        if (agency?.address) doc.text(agency.address);
-        if (agency?.phone) doc.text(agency.phone);
-        if (agency?.email) doc.text(agency.email);
-        doc.moveDown();
-
-        doc.fontSize(14).text('Montant', { underline: true });
-        doc.fontSize(16).text(`${Number(payment.amount || 0).toLocaleString('fr-FR')} FCFA`, { align: 'left' });
-        doc.moveDown();
-
-        doc.fontSize(10).fillColor('#555').text('Merci pour votre confiance.', { align: 'center' });
-
-        doc.end();
-      } catch (err) {
-        reject(err);
-      }
-    });
+    return pdfService.generatePaymentReceiptBuffer(payment, booking, vehicle, agency, user);
   }
 };
 

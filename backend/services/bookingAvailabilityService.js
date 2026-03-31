@@ -16,15 +16,11 @@ const getHoldExpiresAt = (createdAt) => {
 };
 
 const getOverlapCondition = (startDate, endDate) => ({
-  [Op.or]: [
-    { startDate: { [Op.between]: [startDate, endDate] } },
-    { endDate: { [Op.between]: [startDate, endDate] } },
-    {
-      [Op.and]: [
-        { startDate: { [Op.lte]: startDate } },
-        { endDate: { [Op.gte]: endDate } }
-      ]
-    }
+  [Op.and]: [
+    // Treat bookings as half-open intervals: [startDate, endDate).
+    // This allows a new booking to start on the exact day another one ends.
+    { startDate: { [Op.lt]: endDate } },
+    { endDate: { [Op.gt]: startDate } }
   ]
 });
 

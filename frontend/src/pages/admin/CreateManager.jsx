@@ -1,8 +1,7 @@
 ﻿import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, User, Mail, Phone, Lock, Building2, AlertCircle } from 'lucide-react';
+import { User, Mail, Phone, Building2, AlertCircle } from 'lucide-react';
 import { adminService } from '../../services/adminService';
-import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 
 function CreateManager() {
@@ -19,8 +18,6 @@ function CreateManager() {
     lastName: '',
     email: '',
     phone: '',
-    password: '',
-    confirmPassword: '',
     agencyId: ''
   });
 
@@ -58,36 +55,24 @@ function CreateManager() {
     setSuccess('');
 
     // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password || !formData.agencyId) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.agencyId) {
       setError('Veuillez remplir tous les champs');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
       return;
     }
 
     try {
       setLoading(true);
 
-      // Créer le gestionnaire
-      const response = await api.post('/admin/users/create-manager', {
+      const response = await adminService.createManager({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        password: formData.password,
         agencyId: formData.agencyId
       });
 
-      if (response.data.success) {
-        setSuccess(`Gestionnaire créé avec succès ! Email: ${formData.email}`);
+      if (response.success) {
+        setSuccess(response.message || `Gestionnaire créé avec succès ! Email: ${formData.email}`);
         setTimeout(() => {
           navigate('/admin/users');
         }, 3000);
@@ -221,40 +206,8 @@ function CreateManager() {
               </div>
             </div>
 
-            {/* Mot de passe */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mot de passe *
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Confirmation mot de passe */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmer le mot de passe *
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary"
-                  required
-                />
-              </div>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              Le gestionnaire recevra un code de verification par email pour activer son compte avant sa premiere connexion.
             </div>
 
             {/* Boutons */}

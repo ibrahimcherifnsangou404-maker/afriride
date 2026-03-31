@@ -13,6 +13,28 @@ export const managerService = {
     return response.data;
   },
 
+  getAgencyKycStatus: async () => {
+    const response = await api.get('/agencies/my-kyc');
+    return response.data;
+  },
+
+  getAgencyContractPolicy: async () => {
+    const response = await api.get('/agencies/my-contract-policy');
+    return response.data;
+  },
+
+  updateAgencyContractPolicy: async (payload) => {
+    const response = await api.put('/agencies/my-contract-policy', payload);
+    return response.data;
+  },
+
+  submitAgencyKyc: async (payload) => {
+    const response = await api.put('/agencies/my-kyc', payload, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
   // Réservations de l'agence
   getAgencyBookings: async (filters = {}) => {
     const response = await api.get('/manager/bookings', { params: filters });

@@ -4,6 +4,57 @@ const { OAuth2Client } = require('google-auth-library');
 const { User } = require('../models');
 const emailService = require('../services/emailService');
 
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+const EMAIL_CODE_EXPIRY_MINUTES = 10;
+
+const generateEmailVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const buildEmailVerificationToken = (code) => {
+  const expiresAt = new Date(Date.now() + EMAIL_CODE_EXPIRY_MINUTES * 60 * 1000).toISOString();
+  const hashedCode = crypto
+    .createHash('sha256')
+    .update(String(code || '').trim())
+    .digest('hex');
+
+  return `${hashedCode}:${expiresAt}`;
+};
+
+const parseEmailVerificationToken = (storedToken) => {
+  const [hashedCode, expiresAt] = String(storedToken || '').split(':');
+  if (!hashedCode || !expiresAt) {
+    return null;
+  }
+
+  const expireDate = new Date(expiresAt);
+  if (Number.isNaN(expireDate.getTime())) {
+    return null;
+  }
+
+  return { hashedCode, expiresAt: expireDate };
+};
+
+const verifyEmailCodeMatches = (storedToken, code) => {
+  const parsedToken = parseEmailVerificationToken(storedToken);
+  if (!parsedToken) {
+    return { valid: false, reason: 'invalid' };
+  }
+
+  if (parsedToken.expiresAt.getTime() < Date.now()) {
+    return { valid: false, reason: 'expired' };
+  }
+
+  const hashedAttempt = crypto
+    .createHash('sha256')
+    .update(String(code || '').trim())
+    .digest('hex');
+
+  if (hashedAttempt !== parsedToken.hashedCode) {
+    return { valid: false, reason: 'mismatch' };
+  }
+
+  return { valid: true };
+};
+
 // Fonction pour générer un token JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -20,17 +71,25 @@ const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 const register = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, password } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
     // Vérifier si tous les champs sont remplis
-    if (!firstName || !lastName || !email || !phone || !password) {
+    if (!firstName || !lastName || !normalizedEmail || !phone || !password) {
       return res.status(400).json({
         success: false,
         message: 'Veuillez remplir tous les champs'
       });
     }
 
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez entrer une adresse email valide'
+      });
+    }
+
     // Vérifier si l'email existe déjà
-    const userExists = await User.findOne({ where: { email } });
+    const userExists = await User.findOne({ where: { email: normalizedEmail } });
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -47,34 +106,26 @@ const register = async (req, res) => {
     }
 
     // Générer un token de confirmation (aléatoire)
-    const confirmationToken = crypto.randomBytes(32).toString('hex');
-
-    // Hasher le token pour le stockage
-    const hashedConfirmationToken = crypto
-      .createHash('sha256')
-      .update(confirmationToken)
-      .digest('hex');
+    const confirmationCode = generateEmailVerificationCode();
+    const emailConfirmationToken = buildEmailVerificationToken(confirmationCode);
 
     // Créer l'utilisateur (non vérifié par défaut si modèle configuré ainsi)
     const user = await User.create({
       firstName,
       lastName,
-      email,
+      email: normalizedEmail,
       phone,
       password,
       role: 'client',
       isVerified: false,
       verificationStatus: 'unverified',
-      emailConfirmationToken: hashedConfirmationToken
+      emailConfirmationToken
     });
 
     // Créer l'URL de confirmation
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const confirmUrl = `${frontendUrl}/confirm-email/${confirmationToken}`;
-
     // Envoyer email de confirmation
     try {
-      await emailService.sendConfirmationEmail(user, confirmUrl);
+      await emailService.sendVerificationCodeEmail(user, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
     } catch (emailError) {
       console.error('Erreur envoi email confirmation:', emailError);
       // On continue quand même, l'utilisateur pourra demander un renvoi
@@ -91,6 +142,12 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur inscription:', error);
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez entrer une adresse email valide'
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Erreur lors de l\'inscription',
@@ -165,15 +222,158 @@ const confirmEmail = async (req, res) => {
   }
 };
 
+// @desc    Vérifier un code email
+// @route   POST /api/auth/confirm-email-code
+// @access  Public
+const verifyEmailCode = async (req, res) => {
+  try {
+    const { email, code } = req.body || {};
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir votre email et le code de vérification'
+      });
+    }
+
+    const user = await User.findOne({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Code de vérification invalide'
+      });
+    }
+
+    if (user.isVerified) {
+      const token = generateToken(user.id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Email déjà confirmé',
+        data: {
+          token,
+          user: {
+            id: user.id,
+            firstName: user.firstName,
+            email: user.email,
+            role: user.role,
+            isVerified: true
+          }
+        }
+      });
+    }
+
+    const codeCheck = verifyEmailCodeMatches(user.emailConfirmationToken, code);
+    if (!codeCheck.valid) {
+      return res.status(400).json({
+        success: false,
+        message: codeCheck.reason === 'expired'
+          ? 'Le code de vérification a expiré. Demandez-en un nouveau.'
+          : 'Code de vérification invalide'
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationStatus = 'pending';
+    user.emailConfirmationToken = null;
+    await user.save();
+
+    const token = generateToken(user.id);
+
+    emailService.sendWelcomeEmail(user).catch((err) =>
+      console.error('Erreur envoi email bienvenue:', err.message)
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Email confirmé avec succès',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          email: user.email,
+          role: user.role,
+          isVerified: true
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Erreur vérification code email:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la vérification du code email',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Renvoyer un code email
+// @route   POST /api/auth/resend-email-code
+// @access  Public
+const resendEmailCode = async (req, res) => {
+  try {
+    const normalizedEmail = String(req.body?.email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir une adresse email valide'
+      });
+    }
+
+    const user = await User.findOne({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aucun compte trouvé pour cet email'
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cet email est déjà vérifié'
+      });
+    }
+
+    const confirmationCode = generateEmailVerificationCode();
+    user.emailConfirmationToken = buildEmailVerificationToken(confirmationCode);
+    await user.save();
+
+    try {
+      await emailService.sendVerificationCodeEmail(user, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+    } catch (emailError) {
+      console.error('Erreur renvoi code email:', emailError);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Un nouveau code de vérification a été envoyé'
+    });
+  } catch (error) {
+    console.error('Erreur renvoi code email:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors du renvoi du code',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Connexion d'un utilisateur
 // @route   POST /api/auth/login
 // @access  Public
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
     // Vérifier si tous les champs sont remplis
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({
         success: false,
         message: 'Veuillez fournir un email et un mot de passe'
@@ -181,12 +381,19 @@ const login = async (req, res) => {
     }
 
     // Trouver l'utilisateur
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email: normalizedEmail } });
 
     if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Email ou mot de passe incorrect'
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Veuillez vérifier votre email avec le code reçu avant de vous connecter'
       });
     }
 
@@ -613,5 +820,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   confirmEmail,
+  verifyEmailCode,
+  resendEmailCode,
   updatePassword
 };

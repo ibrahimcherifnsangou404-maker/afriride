@@ -5,13 +5,13 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Loader,
-  CalendarDays,
   Wallet,
   Building2,
   User,
   Car,
-  Printer
+  Printer,
+  FileText,
+  ShieldCheck
 } from 'lucide-react';
 import { contractService } from '../services/contractService';
 import { AuthContext } from '../context/AuthContext';
@@ -24,6 +24,35 @@ const formatDate = (value, withTime = false) => {
 };
 
 const formatAmount = (value) => `${Number(value || 0).toLocaleString('fr-FR')} FCFA`;
+
+const parseContractSections = (value) => {
+  if (!value) return [];
+
+  const lines = String(value)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const sections = [];
+  let current = null;
+
+  lines.forEach((line) => {
+    if (/^\d+\.\s/.test(line)) {
+      if (current) sections.push(current);
+      current = { title: line, body: [] };
+      return;
+    }
+
+    if (!current) {
+      current = { title: 'Clause generale', body: [] };
+    }
+
+    current.body.push(line);
+  });
+
+  if (current) sections.push(current);
+  return sections;
+};
 
 function ContractPage() {
   const { id } = useParams();
@@ -110,6 +139,9 @@ function ContractPage() {
   const isAgencySigned = !!contract.agencySignatureDate;
   const isFullySigned = isClientSigned && isAgencySigned;
   const backLink = user?.role === 'manager' || user?.role === 'admin' ? '/manager/bookings' : '/my-bookings';
+  const termSections = parseContractSections(contract.terms);
+  const paymentSections = parseContractSections(contract.paymentTerms);
+  const noteLines = String(contract.notes || '').split('\n').map((line) => line.trim()).filter(Boolean);
 
     let statusConfig = { label: 'Signature en attente', className: 'bg-amber-100 text-amber-800 border-amber-200' };
   if (isFullySigned) {
@@ -195,13 +227,54 @@ function ContractPage() {
             </section>
 
             <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
+              <h2 className="text-xl font-black text-slate-900 mb-5">Points clés du contrat</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-xs uppercase font-bold text-emerald-700 mb-2">Engagement principal</p>
+                  <p className="text-sm text-emerald-950 leading-relaxed">
+                    Le véhicule est loué pour la période convenue et doit être restitué dans un état conforme, avec ses documents, clés et équipements.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs uppercase font-bold text-amber-700 mb-2">Vigilance client</p>
+                  <p className="text-sm text-amber-950 leading-relaxed">
+                    Les infractions, retards, dommages, frais annexes et usages interdits peuvent rester à la charge du locataire selon les clauses du contrat.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                  <p className="text-xs uppercase font-bold text-sky-700 mb-2">Preuve et traçabilité</p>
+                  <p className="text-sm text-sky-950 leading-relaxed">
+                    Réservation, paiement, signatures et échanges liés à la location constituent la base documentaire du dossier contractuel.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
               <h2 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-slate-600" />
+                <FileText className="w-5 h-5 text-slate-600" />
                 Conditions générales
               </h2>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {contract.terms || 'Aucune condition générale renseignée.'}
-              </div>
+              {termSections.length ? (
+                <div className="space-y-4">
+                  {termSections.map((section) => (
+                    <div key={section.title} className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                      <h3 className="font-black text-slate-900 mb-3">{section.title}</h3>
+                      <div className="space-y-2">
+                        {section.body.map((paragraph, index) => (
+                          <p key={`${section.title}-${index}`} className="text-slate-700 leading-relaxed">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {contract.terms || 'Aucune condition générale renseignée.'}
+                </div>
+              )}
             </section>
 
             <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
@@ -209,16 +282,42 @@ function ContractPage() {
                 <Wallet className="w-5 h-5 text-slate-600" />
                 Conditions de paiement
               </h2>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {contract.paymentTerms || 'Aucune condition de paiement renseignée.'}
-              </div>
+              {paymentSections.length ? (
+                <div className="space-y-4">
+                  {paymentSections.map((section) => (
+                    <div key={section.title} className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                      <h3 className="font-black text-slate-900 mb-3">{section.title}</h3>
+                      <div className="space-y-2">
+                        {section.body.map((paragraph, index) => (
+                          <p key={`${section.title}-${index}`} className="text-slate-700 leading-relaxed">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {contract.paymentTerms || 'Aucune condition de paiement renseignée.'}
+                </div>
+              )}
             </section>
 
-            {contract.notes && (
+            {noteLines.length > 0 && (
               <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-[0_10px_35px_rgba(15,23,42,0.08)]">
-                <h2 className="text-xl font-black text-slate-900 mb-4">Notes complémentaires</h2>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-slate-700 whitespace-pre-wrap">
-                  {contract.notes}
+                <h2 className="text-xl font-black text-slate-900 mb-4 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-slate-600" />
+                  Mentions opérationnelles
+                </h2>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="space-y-2">
+                    {noteLines.map((line, index) => (
+                      <p key={`note-${index}`} className="text-slate-700 leading-relaxed">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </section>
             )}

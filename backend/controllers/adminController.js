@@ -1,6 +1,31 @@
+const crypto = require('crypto');
 const { User, Agency, Category, Vehicle, Booking, MessageReport, Message, Conversation } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+const emailService = require('../services/emailService');
+
+const EMAIL_CODE_EXPIRY_MINUTES = 10;
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+const generateEmailVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const buildEmailVerificationToken = (code) => {
+  const expiresAt = new Date(Date.now() + EMAIL_CODE_EXPIRY_MINUTES * 60 * 1000).toISOString();
+  const hashedCode = crypto
+    .createHash('sha256')
+    .update(String(code || '').trim())
+    .digest('hex');
+
+  return `${hashedCode}:${expiresAt}`;
+};
+
+const sanitizeAgencyDocuments = (agency) => {
+  const docs = agency?.kycDocuments || {};
+  return {
+    businessLicense: docs.businessLicense || null,
+    taxCertificate: docs.taxCertificate || null,
+    insuranceCertificate: docs.insuranceCertificate || null
+  };
+};
 
 const extractCancellationReason = (notes) => {
   const raw = String(notes || '');
@@ -596,17 +621,25 @@ const getAllUsers = async (req, res) => {
 // @access  Private (Admin)
 const createManager = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, password, agencyId } = req.body;
+    const { firstName, lastName, email, phone, agencyId } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
-    if (!firstName || !lastName || !email || !phone || !password || !agencyId) {
+    if (!firstName || !lastName || !normalizedEmail || !phone || !agencyId) {
       return res.status(400).json({
         success: false,
         message: 'Veuillez remplir tous les champs obligatoires'
       });
     }
 
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir une adresse email valide'
+      });
+    }
+
     // Vérifier si l'email existe déjà
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ where: { email: normalizedEmail } });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -624,16 +657,27 @@ const createManager = async (req, res) => {
     }
 
     // Créer le gestionnaire
+    const temporaryPassword = crypto.randomBytes(24).toString('hex');
+    const confirmationCode = generateEmailVerificationCode();
+
     const manager = await User.create({
       firstName,
       lastName,
-      email,
+      email: normalizedEmail,
       phone,
-      password,
+      password: temporaryPassword,
       role: 'manager',
       agencyId,
-      isVerified: true
+      isVerified: false,
+      verificationStatus: 'unverified',
+      emailConfirmationToken: buildEmailVerificationToken(confirmationCode)
     });
+
+    try {
+      await emailService.sendVerificationCodeEmail(manager, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+    } catch (emailError) {
+      console.error('Erreur envoi code gestionnaire admin:', emailError);
+    }
 
     res.status(201).json({
       success: true,
@@ -645,7 +689,8 @@ const createManager = async (req, res) => {
         email: manager.email,
         phone: manager.phone,
         role: manager.role,
-        agencyId: manager.agencyId
+        agencyId: manager.agencyId,
+        isVerified: manager.isVerified
       }
     });
   } catch (error) {
@@ -653,6 +698,143 @@ const createManager = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la création du gestionnaire',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Approuver le KYC d'une agence
+// @route   PUT /api/admin/agencies/:id/approve-kyc
+// @access  Private (Admin)
+const approveAgencyKyc = async (req, res) => {
+  try {
+    const agency = await Agency.findByPk(req.params.id);
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence non trouvee'
+      });
+    }
+
+    await agency.update({
+      verificationStatus: 'verified',
+      rejectionReason: null,
+      verifiedAt: new Date()
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Agence verifiee avec succes',
+      data: {
+        id: agency.id,
+        verificationStatus: agency.verificationStatus,
+        verifiedAt: agency.verifiedAt
+      }
+    });
+  } catch (error) {
+    console.error('Erreur approbation KYC agence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la validation KYC agence',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Rejeter le KYC d'une agence
+// @route   PUT /api/admin/agencies/:id/reject-kyc
+// @access  Private (Admin)
+const rejectAgencyKyc = async (req, res) => {
+  try {
+    const reason = String(req.body?.reason || '').trim();
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le motif de rejet est requis'
+      });
+    }
+
+    const agency = await Agency.findByPk(req.params.id);
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence non trouvee'
+      });
+    }
+
+    await agency.update({
+      verificationStatus: 'rejected',
+      rejectionReason: reason,
+      verifiedAt: null
+    });
+
+    await Vehicle.update(
+      { isAvailable: false },
+      { where: { agencyId: agency.id } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Agence rejetee et vehicules depublies',
+      data: {
+        id: agency.id,
+        verificationStatus: agency.verificationStatus,
+        rejectionReason: agency.rejectionReason
+      }
+    });
+  } catch (error) {
+    console.error('Erreur rejet KYC agence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors du rejet KYC agence',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Recuperer les dossiers KYC agence
+// @route   GET /api/admin/agencies/kyc
+// @access  Private (Admin)
+const getAgencyKycRequests = async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query;
+    const where = {};
+    if (['unverified', 'pending', 'verified', 'rejected'].includes(status)) {
+      where.verificationStatus = status;
+    }
+
+    const agencies = await Agency.findAll({
+      where,
+      include: [
+        {
+          model: User,
+          as: 'managers',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+          required: false
+        },
+        {
+          model: Vehicle,
+          as: 'vehicles',
+          attributes: ['id', 'isAvailable'],
+          required: false
+        }
+      ],
+      order: [['updatedAt', 'DESC']]
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: agencies.length,
+      data: agencies.map((agency) => ({
+        ...agency.toJSON(),
+        kycDocuments: sanitizeAgencyDocuments(agency)
+      }))
+    });
+  } catch (error) {
+    console.error('Erreur recuperation KYC agences:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la recuperation des dossiers KYC agence',
       error: error.message
     });
   }
@@ -951,6 +1133,9 @@ const exportCancellationsCsv = async (req, res) => {
 module.exports = {
   getDashboard,
   getAllAgencies,
+  getAgencyKycRequests,
+  approveAgencyKyc,
+  rejectAgencyKyc,
   createAgency,
   updateAgency,
   deleteAgency,

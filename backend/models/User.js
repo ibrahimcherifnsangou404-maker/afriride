@@ -111,6 +111,11 @@ const User = sequelize.define('User', {
   timestamps: true,
   underscored: true,
   hooks: {
+    beforeValidate: (user) => {
+      if (typeof user.email === 'string') {
+        user.email = user.email.trim().toLowerCase();
+      }
+    },
     // Crypter le mot de passe avant de sauvegarder
     beforeCreate: async (user) => {
       if (user.password) {

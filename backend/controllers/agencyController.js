@@ -1,5 +1,38 @@
+const crypto = require('crypto');
 const { Agency, Vehicle, User } = require('../models');
 const { sequelize } = require('../config/database');
+const emailService = require('../services/emailService');
+
+const EMAIL_CODE_EXPIRY_MINUTES = 10;
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+const generateEmailVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const buildEmailVerificationToken = (code) => {
+  const expiresAt = new Date(Date.now() + EMAIL_CODE_EXPIRY_MINUTES * 60 * 1000).toISOString();
+  const hashedCode = crypto
+    .createHash('sha256')
+    .update(String(code || '').trim())
+    .digest('hex');
+
+  return `${hashedCode}:${expiresAt}`;
+};
+
+const sanitizeDocuments = (agency) => {
+  const docs = agency?.kycDocuments || {};
+  return {
+    businessLicense: docs.businessLicense || null,
+    taxCertificate: docs.taxCertificate || null,
+    insuranceCertificate: docs.insuranceCertificate || null
+  };
+};
+
+const sanitizeContractPolicy = (agency) => ({
+  contractCountry: agency?.contractCountry || '',
+  contractJurisdictionCity: agency?.contractJurisdictionCity || '',
+  defaultDepositAmount: agency?.defaultDepositAmount || '',
+  defaultDailyKmLimit: agency?.defaultDailyKmLimit || '',
+  defaultLateFeePerHour: agency?.defaultLateFeePerHour || ''
+});
 
 // @desc    Récupérer toutes les agences
 // @route   GET /api/agencies
@@ -7,7 +40,7 @@ const { sequelize } = require('../config/database');
 const getAgencies = async (req, res) => {
   try {
     const agencies = await Agency.findAll({
-      where: { isActive: true },
+      where: { isActive: true, verificationStatus: 'verified' },
       attributes: ['id', 'name', 'description', 'address', 'phone', 'email', 'logo']
     });
 
@@ -31,7 +64,8 @@ const getAgencies = async (req, res) => {
 // @access  Public
 const getAgencyById = async (req, res) => {
   try {
-    const agency = await Agency.findByPk(req.params.id, {
+    const agency = await Agency.findOne({
+      where: { id: req.params.id, verificationStatus: 'verified', isActive: true },
       include: [
         {
           model: Vehicle,
@@ -161,6 +195,14 @@ const partnerSignup = async (req, res) => {
     const normalizedAgencyEmail = String(email).trim().toLowerCase();
     const normalizedManagerEmail = String(managerEmail).trim().toLowerCase();
 
+    if (!isValidEmail(normalizedAgencyEmail) || !isValidEmail(normalizedManagerEmail)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir des adresses email valides pour l agence et le manager'
+      });
+    }
+
     const existingAgency = await Agency.findOne({ where: { email: normalizedAgencyEmail }, transaction });
     if (existingAgency) {
       await transaction.rollback();
@@ -178,6 +220,8 @@ const partnerSignup = async (req, res) => {
         message: 'Un compte utilisateur avec cet email manager existe déjà'
       });
     }
+
+    const confirmationCode = generateEmailVerificationCode();
 
     const agency = await Agency.create({
       name,
@@ -200,11 +244,18 @@ const partnerSignup = async (req, res) => {
       password: managerPassword,
       role: 'manager',
       agencyId: agency.id,
-      isVerified: true,
-      verificationStatus: 'verified'
+      isVerified: false,
+      verificationStatus: 'unverified',
+      emailConfirmationToken: buildEmailVerificationToken(confirmationCode)
     }, { transaction });
 
     await transaction.commit();
+
+    try {
+      await emailService.sendVerificationCodeEmail(manager, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+    } catch (emailError) {
+      console.error('Erreur envoi code manager:', emailError);
+    }
 
     res.status(201).json({
       success: true,
@@ -222,7 +273,8 @@ const partnerSignup = async (req, res) => {
           lastName: manager.lastName,
           email: manager.email,
           phone: manager.phone,
-          role: manager.role
+          role: manager.role,
+          isVerified: manager.isVerified
         }
       }
     });
@@ -356,6 +408,271 @@ const updateAgency = async (req, res) => {
   }
 };
 
+// @desc    Recuperer le statut KYC de l'agence du manager connecte
+// @route   GET /api/agencies/my-kyc
+// @access  Private (Manager/Admin)
+const getMyAgencyKyc = async (req, res) => {
+  try {
+    if (!req.user?.agencyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune agence associee a ce compte'
+      });
+    }
+
+    const agency = await Agency.findByPk(req.user.agencyId, {
+      attributes: [
+        'id',
+        'name',
+        'email',
+        'phone',
+        'address',
+        'city',
+        'licenseNumber',
+        'registrationNumber',
+        'verificationStatus',
+        'rejectionReason',
+        'kycDocuments',
+        'kycSubmittedAt',
+        'verifiedAt',
+        'contractCountry',
+        'contractJurisdictionCity',
+        'defaultDepositAmount',
+        'defaultDailyKmLimit',
+        'defaultLateFeePerHour'
+      ]
+    });
+
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence introuvable'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...agency.toJSON(),
+        kycDocuments: sanitizeDocuments(agency),
+        contractPolicy: sanitizeContractPolicy(agency)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur recuperation KYC agence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la recuperation du KYC agence',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Soumettre ou mettre a jour le dossier KYC de l'agence
+// @route   PUT /api/agencies/my-kyc
+// @access  Private (Manager/Admin)
+const submitAgencyKyc = async (req, res) => {
+  try {
+    if (!req.user?.agencyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune agence associee a ce compte'
+      });
+    }
+
+    const agency = await Agency.findByPk(req.user.agencyId);
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence introuvable'
+      });
+    }
+
+    const { city, address, phone, email, licenseNumber, registrationNumber } = req.body || {};
+    const normalizedEmail = String(email || agency.email || '').trim().toLowerCase();
+
+    if (!address || !phone || !normalizedEmail || !licenseNumber || !registrationNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez completer les informations legales et les coordonnees de l agence'
+      });
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir une adresse email valide pour l agence'
+      });
+    }
+
+    const files = req.files || {};
+    const currentDocs = sanitizeDocuments(agency);
+    const nextDocs = {
+      businessLicense: files.businessLicense?.[0] ? `/uploads/documents/${files.businessLicense[0].filename}` : currentDocs.businessLicense,
+      taxCertificate: files.taxCertificate?.[0] ? `/uploads/documents/${files.taxCertificate[0].filename}` : currentDocs.taxCertificate,
+      insuranceCertificate: files.insuranceCertificate?.[0] ? `/uploads/documents/${files.insuranceCertificate[0].filename}` : currentDocs.insuranceCertificate
+    };
+
+    if (!nextDocs.businessLicense || !nextDocs.taxCertificate || !nextDocs.insuranceCertificate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez fournir la licence commerciale, le certificat fiscal et l assurance'
+      });
+    }
+
+    await agency.update({
+      city: city || agency.city,
+      address,
+      phone,
+      email: normalizedEmail,
+      licenseNumber,
+      registrationNumber,
+      kycDocuments: nextDocs,
+      kycSubmittedAt: new Date(),
+      verificationStatus: 'pending',
+      rejectionReason: null
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Dossier KYC agence soumis avec succes',
+      data: {
+        ...agency.toJSON(),
+        kycDocuments: sanitizeDocuments(agency)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur soumission KYC agence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la soumission du KYC agence',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Recuperer la politique contractuelle de l'agence connectee
+// @route   GET /api/agencies/my-contract-policy
+// @access  Private (Manager/Admin)
+const getMyAgencyContractPolicy = async (req, res) => {
+  try {
+    if (!req.user?.agencyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune agence associee a ce compte'
+      });
+    }
+
+    const agency = await Agency.findByPk(req.user.agencyId, {
+      attributes: [
+        'id',
+        'name',
+        'verificationStatus',
+        'contractCountry',
+        'contractJurisdictionCity',
+        'defaultDepositAmount',
+        'defaultDailyKmLimit',
+        'defaultLateFeePerHour'
+      ]
+    });
+
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence introuvable'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: agency.id,
+        name: agency.name,
+        verificationStatus: agency.verificationStatus,
+        ...sanitizeContractPolicy(agency)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur recuperation politique contrat agence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la recuperation de la politique contractuelle',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Mettre a jour la politique contractuelle de l'agence connectee
+// @route   PUT /api/agencies/my-contract-policy
+// @access  Private (Manager/Admin)
+const updateMyAgencyContractPolicy = async (req, res) => {
+  try {
+    if (!req.user?.agencyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune agence associee a ce compte'
+      });
+    }
+
+    const agency = await Agency.findByPk(req.user.agencyId);
+    if (!agency) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agence introuvable'
+      });
+    }
+
+    const {
+      contractCountry,
+      contractJurisdictionCity,
+      defaultDepositAmount,
+      defaultDailyKmLimit,
+      defaultLateFeePerHour
+    } = req.body || {};
+
+    if (!contractCountry || !contractJurisdictionCity || !defaultDepositAmount || !defaultDailyKmLimit || !defaultLateFeePerHour) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veuillez renseigner le pays, la ville de juridiction, la caution, le kilometrage journalier et la penalite de retard'
+      });
+    }
+
+    const normalizedKm = String(defaultDailyKmLimit).trim();
+    if (!/^\d+$/.test(normalizedKm) || Number(normalizedKm) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le kilometrage journalier doit etre un nombre entier positif'
+      });
+    }
+
+    await agency.update({
+      contractCountry: String(contractCountry).trim(),
+      contractJurisdictionCity: String(contractJurisdictionCity).trim(),
+      defaultDepositAmount: String(defaultDepositAmount).trim(),
+      defaultDailyKmLimit: normalizedKm,
+      defaultLateFeePerHour: String(defaultLateFeePerHour).trim()
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Politique contractuelle mise a jour avec succes',
+      data: {
+        id: agency.id,
+        name: agency.name,
+        verificationStatus: agency.verificationStatus,
+        ...sanitizeContractPolicy(agency)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur mise a jour politique contrat agence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise a jour de la politique contractuelle',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAgencies,
   getAgencyById,
@@ -363,5 +680,9 @@ module.exports = {
   partnerSignup,
   createAgency,
   updateAgency,
-  deleteAgency
+  deleteAgency,
+  getMyAgencyKyc,
+  submitAgencyKyc,
+  getMyAgencyContractPolicy,
+  updateMyAgencyContractPolicy
 };

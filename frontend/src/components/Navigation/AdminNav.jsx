@@ -17,7 +17,8 @@ import {
   MessageCircle,
   Eye,
   Receipt,
-  UserPlus
+  UserPlus,
+  ShieldCheck
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
@@ -40,6 +41,7 @@ export default function AdminNav() {
   ];
 
   const secondaryNav = [
+    { label: 'KYC agences', icon: ShieldCheck, path: '/admin/agencies/kyc' },
     { label: 'Messagerie', icon: MessageCircle, path: '/messages' },
     { label: 'Signalements', icon: AlertTriangle, path: '/admin/message-reports' },
     { label: 'KYC', icon: AlertCircle, path: '/admin/kyc' },

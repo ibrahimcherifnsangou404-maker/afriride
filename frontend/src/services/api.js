@@ -72,6 +72,20 @@ export const authService = {
     localStorage.removeItem('user');
   },
 
+  verifyEmailCode: async ({ email, code }) => {
+    const response = await api.post('/auth/confirm-email-code', { email, code });
+    if (response.data.success && response.data.data.token) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+    return response.data;
+  },
+
+  resendEmailCode: async (email) => {
+    const response = await api.post('/auth/resend-email-code', { email });
+    return response.data;
+  },
+
   // Récupérer le profil
   getProfile: async () => {
     const response = await api.get('/auth/me');
