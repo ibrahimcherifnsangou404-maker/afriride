@@ -73,6 +73,13 @@ const register = async (req, res) => {
     const { firstName, lastName, email, phone, password } = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase();
 
+    if (!emailService.isAvailable()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Le service email de verification n est pas configure. Configurez EMAIL_USER et EMAIL_PASSWORD ou RESEND_API_KEY avant de creer de nouveaux comptes.'
+      });
+    }
+
     // Vérifier si tous les champs sont remplis
     if (!firstName || !lastName || !normalizedEmail || !phone || !password) {
       return res.status(400).json({
@@ -125,10 +132,21 @@ const register = async (req, res) => {
     // Créer l'URL de confirmation
     // Envoyer email de confirmation
     try {
-      await emailService.sendVerificationCodeEmail(user, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      const emailResult = await emailService.sendVerificationCodeEmail(user, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      if (!emailResult?.success) {
+        await user.destroy();
+        return res.status(502).json({
+          success: false,
+          message: 'Impossible d envoyer l email de verification pour le moment. Verifiez la configuration email du serveur puis reessayez.'
+        });
+      }
     } catch (emailError) {
+      await user.destroy();
       console.error('Erreur envoi email confirmation:', emailError);
-      // On continue quand même, l'utilisateur pourra demander un renvoi
+      return res.status(502).json({
+        success: false,
+        message: 'Impossible d envoyer l email de verification pour le moment. Veuillez reessayer plus tard.'
+      });
     }
 
     res.status(201).json({
@@ -345,9 +363,19 @@ const resendEmailCode = async (req, res) => {
     await user.save();
 
     try {
-      await emailService.sendVerificationCodeEmail(user, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      const emailResult = await emailService.sendVerificationCodeEmail(user, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      if (!emailResult?.success) {
+        return res.status(502).json({
+          success: false,
+          message: 'Impossible d envoyer le code de verification pour le moment'
+        });
+      }
     } catch (emailError) {
       console.error('Erreur renvoi code email:', emailError);
+      return res.status(502).json({
+        success: false,
+        message: 'Impossible d envoyer le code de verification pour le moment'
+      });
     }
 
     return res.status(200).json({

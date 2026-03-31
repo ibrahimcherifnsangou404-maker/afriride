@@ -17,6 +17,24 @@ const buildEmailVerificationToken = (code) => {
   return `${hashedCode}:${expiresAt}`;
 };
 
+const ensureAgencyContractPolicyColumns = async () => {
+  const queryInterface = sequelize.getQueryInterface();
+  const table = await queryInterface.describeTable('agencies');
+  const contractColumns = [
+    ['contract_country', { type: require('sequelize').DataTypes.STRING, allowNull: true }],
+    ['contract_jurisdiction_city', { type: require('sequelize').DataTypes.STRING, allowNull: true }],
+    ['default_deposit_amount', { type: require('sequelize').DataTypes.STRING, allowNull: true }],
+    ['default_daily_km_limit', { type: require('sequelize').DataTypes.STRING, allowNull: true }],
+    ['default_late_fee_per_hour', { type: require('sequelize').DataTypes.STRING, allowNull: true }]
+  ];
+
+  for (const [column, definition] of contractColumns) {
+    if (!table[column]) {
+      await queryInterface.addColumn('agencies', column, definition);
+    }
+  }
+};
+
 const sanitizeDocuments = (agency) => {
   const docs = agency?.kycDocuments || {};
   return {
@@ -252,9 +270,19 @@ const partnerSignup = async (req, res) => {
     await transaction.commit();
 
     try {
-      await emailService.sendVerificationCodeEmail(manager, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      const emailResult = await emailService.sendVerificationCodeEmail(manager, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      if (!emailResult?.success) {
+        return res.status(502).json({
+          success: false,
+          message: 'Compte cree, mais impossible d envoyer l email de verification du manager pour le moment'
+        });
+      }
     } catch (emailError) {
       console.error('Erreur envoi code manager:', emailError);
+      return res.status(502).json({
+        success: false,
+        message: 'Compte cree, mais impossible d envoyer l email de verification du manager pour le moment'
+      });
     }
 
     res.status(201).json({
@@ -556,6 +584,8 @@ const submitAgencyKyc = async (req, res) => {
 // @access  Private (Manager/Admin)
 const getMyAgencyContractPolicy = async (req, res) => {
   try {
+    await ensureAgencyContractPolicyColumns();
+
     if (!req.user?.agencyId) {
       return res.status(400).json({
         success: false,
@@ -607,6 +637,8 @@ const getMyAgencyContractPolicy = async (req, res) => {
 // @access  Private (Manager/Admin)
 const updateMyAgencyContractPolicy = async (req, res) => {
   try {
+    await ensureAgencyContractPolicyColumns();
+
     if (!req.user?.agencyId) {
       return res.status(400).json({
         success: false,

@@ -34,6 +34,25 @@ api.interceptors.request.use(
   }
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isAuthPage = ['/login', '/register', '/forgot-password'].some((path) => currentPath.startsWith(path));
+
+      if (typeof window !== 'undefined' && !isAuthPage) {
+        window.location.assign('/login');
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // Service d'authentification
 export const authService = {
   // Inscription

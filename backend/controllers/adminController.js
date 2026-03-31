@@ -674,9 +674,19 @@ const createManager = async (req, res) => {
     });
 
     try {
-      await emailService.sendVerificationCodeEmail(manager, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      const emailResult = await emailService.sendVerificationCodeEmail(manager, confirmationCode, EMAIL_CODE_EXPIRY_MINUTES);
+      if (!emailResult?.success) {
+        return res.status(502).json({
+          success: false,
+          message: 'Gestionnaire cree, mais impossible d envoyer l email de verification pour le moment'
+        });
+      }
     } catch (emailError) {
       console.error('Erreur envoi code gestionnaire admin:', emailError);
+      return res.status(502).json({
+        success: false,
+        message: 'Gestionnaire cree, mais impossible d envoyer l email de verification pour le moment'
+      });
     }
 
     res.status(201).json({

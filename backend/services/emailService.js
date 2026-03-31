@@ -106,6 +106,7 @@ const sendEmail = async (mailOptions) => {
 
 // Service d'emails
 const emailService = {
+  isAvailable: () => isResendConfigured || Boolean(transporter),
 
   sendConfirmationEmail: async (user, confirmUrl) => {
     const htmlContent = `
