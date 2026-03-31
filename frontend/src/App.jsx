@@ -62,7 +62,7 @@ function AppRoutes() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <PageTransition key={location.pathname}>
+      <PageTransition>
         <Routes location={location}>
           {/* Routes publiques */}
           <Route path="/"                        element={<HomePage />} />
