@@ -18,6 +18,8 @@ import logo from '../assets/afriride-logo.png';
 function LoginPage() {
   const navigate = useNavigate();
   const { login, googleLogin } = useContext(AuthContext);
+  const shouldShowEmailCodeCta = error.toLowerCase().includes('vérifier votre email')
+    || error.toLowerCase().includes('verifier votre email');
 
   const [formData, setFormData] = useState({
     email: '',
@@ -184,6 +186,17 @@ function LoginPage() {
           {error && (
             <div className="mb-6" aria-live="polite">
               <Alert type="error" message={error} icon={AlertCircle} />
+              {shouldShowEmailCodeCta && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/confirm-email', {
+                    state: { email: formData.email.trim().toLowerCase() }
+                  })}
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  Entrer mon code de verification
+                </button>
+              )}
             </div>
           )}
           {googleError && (
