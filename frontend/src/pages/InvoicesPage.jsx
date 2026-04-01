@@ -61,6 +61,7 @@ function InvoicesPage() {
       setInvoices(response.data.data || []);
     } catch (err) {
       console.error('Erreur chargement factures:', err);
+      setInvoices([]);
       setError(err.response?.data?.message || 'Erreur lors du chargement des factures');
     } finally {
       setLoading(false);
@@ -79,6 +80,7 @@ function InvoicesPage() {
       setConsolidatedInvoices(response.data.data || []);
     } catch (err) {
       console.error('Erreur chargement consolidation B2B:', err);
+      setConsolidatedInvoices([]);
       setError(err.response?.data?.message || 'Erreur lors du chargement des factures consolidees');
     } finally {
       setLoading(false);

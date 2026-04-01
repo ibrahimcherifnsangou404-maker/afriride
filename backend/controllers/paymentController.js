@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
 const emailService = require('../services/emailService');
 const pdfService = require('../services/pdfService');
+const contractGeneratorService = require('../services/contractGeneratorService');
 const { HOLD_MINUTES, getPendingThresholdDate } = require('../services/bookingAvailabilityService');
 
 const generateContractNumber = () => {
@@ -161,7 +162,7 @@ const paymentController = {
     try {
       const { status, paymentMethod, q, startDate, endDate } = req.query;
       const paymentWhere = {};
-      const bookingWhere = {};
+      const whereAndClauses = [];
 
       if (status) paymentWhere.status = status;
       if (paymentMethod) paymentWhere.paymentMethod = paymentMethod;
@@ -173,12 +174,17 @@ const paymentController = {
       }
 
       if (q && q.trim()) {
-        bookingWhere[Op.or] = [
-          { '$booking.vehicle.brand$': { [Op.like]: `%${q.trim()}%` } },
-          { '$booking.vehicle.model$': { [Op.like]: `%${q.trim()}%` } },
-          { '$user.firstName$': { [Op.like]: `%${q.trim()}%` } },
-          { '$user.lastName$': { [Op.like]: `%${q.trim()}%` } }
-        ];
+        const search = q.trim().toLowerCase();
+        whereAndClauses.push({
+          [Op.or]: [
+            sequelize.where(sequelize.fn('LOWER', sequelize.col('booking->vehicle.brand')), { [Op.like]: `%${search}%` }),
+            sequelize.where(sequelize.fn('LOWER', sequelize.col('booking->vehicle.model')), { [Op.like]: `%${search}%` }),
+            sequelize.where(sequelize.fn('LOWER', sequelize.col('user.firstName')), { [Op.like]: `%${search}%` }),
+            sequelize.where(sequelize.fn('LOWER', sequelize.col('user.lastName')), { [Op.like]: `%${search}%` }),
+            sequelize.where(sequelize.fn('LOWER', sequelize.col('user.email')), { [Op.like]: `%${search}%` }),
+            sequelize.where(sequelize.fn('LOWER', sequelize.col('booking->vehicle->agency.name')), { [Op.like]: `%${search}%` })
+          ]
+        });
       }
 
       const include = [
@@ -211,8 +217,13 @@ const paymentController = {
         include[0].include[0].required = true;
       }
 
+      const finalWhere = { ...paymentWhere };
+      if (whereAndClauses.length > 0) {
+        finalWhere[Op.and] = whereAndClauses;
+      }
+
       const payments = await Payment.findAll({
-        where: { ...paymentWhere, ...bookingWhere },
+        where: finalWhere,
         include,
         order: [['createdAt', 'DESC']]
       });
