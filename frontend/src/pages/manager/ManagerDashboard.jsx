@@ -194,6 +194,25 @@ function ManagerDashboard() {
     }
   };
 
+  const openClientConversation = (booking) => {
+    const participantId = booking?.user?.id;
+
+    if (!participantId) {
+      addToast('Client introuvable pour cette reservation', 'error');
+      return;
+    }
+
+    const vehicleLabel = [booking?.vehicle?.brand, booking?.vehicle?.model].filter(Boolean).join(' ').trim();
+    const prefill = `Bonjour ${booking?.user?.firstName || ''}, je vous contacte au sujet de votre reservation${vehicleLabel ? ` (${vehicleLabel})` : ''}.`;
+    const params = new URLSearchParams({
+      participantId,
+      bookingId: booking?.id || '',
+      prefill
+    });
+
+    navigate(`/messages?${params.toString()}`);
+  };
+
   // DATA PROCESSING
   const stats = dashboardData?.stats || {};
   const bookings = Array.isArray(dashboardData?.recentBookings) ? dashboardData.recentBookings : [];
@@ -407,7 +426,7 @@ function ManagerDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-1 opacity-100">
                               <button
                                 onClick={() => { setSelectedBooking(booking); setIsDetailsModalOpen(true); }}
                                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -416,9 +435,9 @@ function ManagerDashboard() {
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => { setSelectedBooking(booking); setIsMessageModalOpen(true); }}
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title="Message"
+                                onClick={() => openClientConversation(booking)}
+                                className="p-2 text-indigo-600 bg-indigo-50 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors"
+                                title="Ouvrir la messagerie" aria-label="Ouvrir la messagerie avec le client"
                               >
                                 <MessageCircle className="w-4 h-4" />
                               </button>
@@ -601,6 +620,8 @@ function ManagerDashboard() {
 }
 
 export default ManagerDashboard;
+
+
 
 
 
