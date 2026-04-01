@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Download,
@@ -86,7 +86,7 @@ function ContractPage() {
       setSigning(true);
       setError('');
       const response = await contractService.signContractAsClient(id);
-      setSuccess('Contrat signé avec succès. En attente de validation par lâ€™agence.');
+      setSuccess("Contrat signé avec succès. En attente de validation par l'agence.");
       setContract(response.data.data);
       setTimeout(() => navigate('/my-bookings'), 1800);
     } catch (err) {
@@ -102,7 +102,7 @@ function ContractPage() {
       setSigning(true);
       setError('');
       const response = await contractService.signContractAsAgency(id);
-      setSuccess('Contrat signé au nom de lâ€™agence.');
+      setSuccess("Contrat signé au nom de l'agence.");
       setContract(response.data.data);
       setTimeout(() => loadContract(), 1000);
     } catch (err) {
@@ -356,7 +356,7 @@ function ContractPage() {
                       disabled={signing}
                       className="mt-3 w-full px-4 py-2.5 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {signing ? 'Signature en cours...' : 'Signer au nom de lâ€™agence'}
+                      {signing ? 'Signature en cours...' : "Signer au nom de l'agence"}
                     </button>
                   )}
                 </div>

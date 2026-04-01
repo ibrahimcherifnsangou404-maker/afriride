@@ -341,6 +341,86 @@ const emailService = {
     });
   },
 
+  // Notification au manager quand un client fait une réservation
+  sendNewBookingManagerEmail: async (manager, booking, vehicle, client) => {
+    const startDate = new Date(booking.startDate).toLocaleDateString('fr-FR');
+    const endDate = new Date(booking.endDate).toLocaleDateString('fr-FR');
+    const totalDays = Math.ceil((new Date(booking.endDate) - new Date(booking.startDate)) / (1000 * 60 * 60 * 24));
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px; text-align: center; color: white;">
+          <h1>🔔 Nouvelle Réservation</h1>
+          <p style="font-size: 16px; margin: 0;">Une nouvelle réservation attend votre validation</p>
+        </div>
+        <div style="padding: 40px; background: #f5f5f5;">
+          <p style="font-size: 16px; color: #333;">Bonjour ${manager.firstName},</p>
+          <p>Le client <strong>${client.firstName} ${client.lastName}</strong> vient de réserver l'un de vos véhicules.</p>
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 8px 0;"><strong>🚗 Véhicule :</strong> ${vehicle.brand} ${vehicle.model} (${vehicle.year || ''})</p>
+            <p style="margin: 8px 0;"><strong>📅 Du :</strong> ${startDate} <strong>au</strong> ${endDate}</p>
+            <p style="margin: 8px 0;"><strong>⏱ Durée :</strong> ${totalDays} jour(s)</p>
+            <p style="margin: 8px 0;"><strong>💰 Montant :</strong> ${Number(booking.totalPrice).toLocaleString('fr-FR')} FCFA</p>
+            <p style="margin: 8px 0;"><strong>👤 Client :</strong> ${client.firstName} ${client.lastName}</p>
+            <p style="margin: 8px 0;"><strong>📧 Email client :</strong> ${client.email}</p>
+            <p style="margin: 8px 0;"><strong>📱 Téléphone :</strong> ${client.phone}</p>
+            ${booking.notes ? `<p style="margin: 8px 0;"><strong>📝 Notes :</strong> ${booking.notes}</p>` : ''}
+          </div>
+          <p style="color: #666; font-size: 14px;">Connectez-vous à votre tableau de bord pour valider ou refuser cette réservation.</p>
+        </div>
+        <div style="background: #333; padding: 20px; text-align: center; color: white;">
+          <p style="margin: 0;">© 2026 AfriRide - Tous droits réservés</p>
+        </div>
+      </div>
+    `;
+    return sendEmail({
+      from: process.env.EMAIL_FROM || 'noreply@afriride.com',
+      to: manager.email,
+      subject: `🔔 Nouvelle réservation - ${vehicle.brand} ${vehicle.model} (${startDate} → ${endDate})`,
+      html: htmlContent
+    });
+  },
+
+  // Notification au client quand le manager valide sa réservation
+  sendBookingApprovedClientEmail: async (client, booking, vehicle, agency) => {
+    const startDate = new Date(booking.startDate).toLocaleDateString('fr-FR');
+    const endDate = new Date(booking.endDate).toLocaleDateString('fr-FR');
+    const totalDays = Math.ceil((new Date(booking.endDate) - new Date(booking.startDate)) / (1000 * 60 * 60 * 24));
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; color: white;">
+          <h1>✅ Réservation Confirmée !</h1>
+          <p style="font-size: 18px; margin: 0;">Votre réservation a été validée par l'agence</p>
+        </div>
+        <div style="padding: 40px; background: #f5f5f5;">
+          <p style="font-size: 16px; color: #333;">Bonjour ${client.firstName},</p>
+          <p>Excellente nouvelle ! L'agence <strong>${agency?.name || 'AfriRide'}</strong> a confirmé votre réservation.</p>
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <p style="margin: 8px 0;"><strong>🚗 Véhicule :</strong> ${vehicle.brand} ${vehicle.model} (${vehicle.year || ''})</p>
+            <p style="margin: 8px 0;"><strong>📅 Du :</strong> ${startDate} <strong>au</strong> ${endDate}</p>
+            <p style="margin: 8px 0;"><strong>⏱ Durée :</strong> ${totalDays} jour(s)</p>
+            <p style="margin: 8px 0;"><strong>💰 Montant total :</strong> ${Number(booking.totalPrice).toLocaleString('fr-FR')} FCFA</p>
+            ${agency ? `<p style="margin: 8px 0;"><strong>📍 Agence :</strong> ${agency.name}${agency.address ? ' - ' + agency.address : ''}</p>` : ''}
+            ${agency?.phone ? `<p style="margin: 8px 0;"><strong>📞 Contact agence :</strong> ${agency.phone}</p>` : ''}
+          </div>
+          <div style="background: #ecfdf5; border: 1px solid #6ee7b7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #065f46; font-size: 14px;">
+              💡 <strong>Prochaine étape :</strong> Procédez au paiement depuis votre espace "Mes Réservations" pour finaliser la location.
+            </p>
+          </div>
+        </div>
+        <div style="background: #333; padding: 20px; text-align: center; color: white;">
+          <p style="margin: 0;">© 2026 AfriRide - Tous droits réservés</p>
+        </div>
+      </div>
+    `;
+    return sendEmail({
+      from: process.env.EMAIL_FROM || 'noreply@afriride.com',
+      to: client.email,
+      subject: `✅ Réservation confirmée - ${vehicle.brand} ${vehicle.model} du ${startDate} au ${endDate}`,
+      html: htmlContent
+    });
+  },
+
   sendPasswordResetEmail: async (user, resetUrl) => {
     const result = await sendEmail({
       from: process.env.EMAIL_FROM || 'noreply@afriride.com',

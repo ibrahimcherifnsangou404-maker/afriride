@@ -277,10 +277,10 @@ const signContractAsClient = async (req, res) => {
     }
 
     // Vérifier que c'est bien le client du contrat
-    if (contract.userId !== req.user.id) {
+    if (String(contract.userId) !== String(req.user.id)) {
       return res.status(403).json({
         success: false,
-        message: 'Non autorisé'
+        message: 'Non autorisé - ce contrat ne vous appartient pas'
       });
     }
 

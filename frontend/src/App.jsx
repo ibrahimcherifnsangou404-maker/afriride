@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { setNavigateRef } from './utils/navigate';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/Navigation';
@@ -59,6 +60,13 @@ const AdminMessageReports = lazy(() => import('./pages/admin/AdminMessageReports
 // ── Inner wrapper so PageTransition can use useLocation inside <Router> ──────
 function AppRoutes() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Enregistre navigate dans le singleton pour que les intercepteurs Axios
+  // puissent rediriger sans hard reload (ex: erreur 401)
+  useEffect(() => {
+    setNavigateRef(navigate);
+  }, [navigate]);
 
   return (
     <Suspense fallback={<PageLoader />}>

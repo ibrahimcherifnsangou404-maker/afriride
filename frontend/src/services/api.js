@@ -1,4 +1,5 @@
-﻿import axios from 'axios';
+import axios from 'axios';
+import { navigateTo } from '../utils/navigate';
 
 // URL de base de l'API (sans /api pour servir les médias)
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -45,7 +46,8 @@ api.interceptors.response.use(
       const isAuthPage = ['/login', '/register', '/forgot-password'].some((path) => currentPath.startsWith(path));
 
       if (typeof window !== 'undefined' && !isAuthPage) {
-        window.location.assign('/login');
+        // Utilise React Router (navigate singleton) pour éviter un hard reload
+        navigateTo('/login');
       }
     }
 

@@ -212,12 +212,30 @@ const createBooking = async (req, res) => {
       agencyId: bookingWithDetails.vehicle.agencyId
     });
 
-    // 🆕 Envoyer email de confirmation de réservation
+    // Email au client : confirmation de sa demande de réservation
     emailService.sendBookingConfirmationEmail(
       bookingWithDetails,
       bookingWithDetails.vehicle,
       bookingWithDetails.user
-    ).catch(err => console.error('Erreur envoi email:', err.message));
+    ).catch(err => console.error('Erreur envoi email client:', err.message));
+
+    // Email au manager de l'agence : notification nouvelle réservation
+    const agencyId = bookingWithDetails.vehicle?.agencyId;
+    if (agencyId) {
+      User.findOne({
+        where: { agency_id: agencyId, role: 'manager' },
+        attributes: ['firstName', 'lastName', 'email']
+      }).then(manager => {
+        if (manager) {
+          emailService.sendNewBookingManagerEmail(
+            manager,
+            bookingWithDetails,
+            bookingWithDetails.vehicle,
+            bookingWithDetails.user
+          ).catch(err => console.error('Erreur envoi email manager:', err.message));
+        }
+      }).catch(err => console.error('Erreur recherche manager:', err.message));
+    }
 
     // 🆕 Envoyer SMS de confirmation (optionnel)
     smsService.sendBookingConfirmationSMS(
@@ -604,6 +622,29 @@ const updateBookingStatus = async (req, res) => {
           reason: 'booking_completed'
         });
       }
+    }
+
+    // Email au client quand le manager confirme la réservation
+    if (status === 'confirmed') {
+      Booking.findByPk(req.params.id, {
+        include: [
+          {
+            model: Vehicle,
+            as: 'vehicle',
+            include: [{ model: Agency, as: 'agency', attributes: ['name', 'address', 'phone'] }]
+          },
+          { model: User, as: 'user', attributes: ['firstName', 'lastName', 'email', 'phone'] }
+        ]
+      }).then(bookingFull => {
+        if (bookingFull?.user && bookingFull?.vehicle) {
+          emailService.sendBookingApprovedClientEmail(
+            bookingFull.user,
+            bookingFull,
+            bookingFull.vehicle,
+            bookingFull.vehicle.agency
+          ).catch(err => console.error('Erreur envoi email confirmation client:', err.message));
+        }
+      }).catch(err => console.error('Erreur chargement réservation pour email:', err.message));
     }
 
     res.status(200).json({

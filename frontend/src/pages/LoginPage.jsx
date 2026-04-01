@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -12,6 +12,7 @@ import {
   Github
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import { authService } from '../services/api';
 import { Alert } from '../components/UI';
 import logo from '../assets/afriride-logo.png';
 
@@ -156,6 +157,31 @@ function LoginPage() {
           break;
       }
     } else {
+      // Si le compte n'est pas vérifié, envoyer automatiquement un code
+      // et rediriger vers la page de confirmation
+      const isUnverified =
+        result.message?.toLowerCase().includes('vérifier votre email') ||
+        result.message?.toLowerCase().includes('verifier votre email');
+
+      if (isUnverified) {
+        const email = formData.email.trim().toLowerCase();
+        // Envoyer un nouveau code en arrière-plan
+        try {
+          await authService.resendEmailCode(email);
+        } catch (_) {
+          // On ignore l'erreur, la page de confirmation
+          // permet de renvoyer manuellement
+        }
+        // Rediriger vers la page de vérification avec l'email pré-rempli
+        navigate('/confirm-email', {
+          state: {
+            email,
+            autoSent: true
+          }
+        });
+        return;
+      }
+
       setError(result.message);
     }
   };

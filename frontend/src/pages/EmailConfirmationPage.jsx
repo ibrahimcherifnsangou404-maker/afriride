@@ -12,13 +12,16 @@ function EmailConfirmationPage() {
     () => String(location.state?.email || '').trim().toLowerCase(),
     [location.state?.email]
   );
+  const autoSent = Boolean(location.state?.autoSent);
 
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [success, setSuccess] = useState(
+    autoSent ? 'Un code de vérification vient d\'être envoyé à votre adresse email.' : ''
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
