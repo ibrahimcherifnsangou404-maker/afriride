@@ -27,6 +27,22 @@ export default function PublicNav() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   return (
     <nav ref={navRef} className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

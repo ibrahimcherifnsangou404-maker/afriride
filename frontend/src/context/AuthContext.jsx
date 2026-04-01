@@ -7,14 +7,19 @@ export const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('token'));
   const [user, setUser] = useState(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
+    if (!localStorage.getItem('token')) return null;
     return authService.getCurrentUser();
   });
-  const loading = false;
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('token')));
 
   const refreshUser = async () => {
+    if (!localStorage.getItem('token')) {
+      setLoading(false);
+      return null;
+    }
+
     try {
       const profileResponse = await authService.getProfile();
       const profile = profileResponse?.data;
@@ -25,21 +30,35 @@ export const AuthProvider = ({ children }) => {
       return profile || null;
     } catch (error) {
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!authToken) {
+      setLoading(false);
+      return;
+    }
+
     refreshUser();
-  }, []);
+  }, [authToken]);
+
+  const syncLocalAuthState = (fallbackUser = null) => {
+    const storedToken = localStorage.getItem('token');
+    const currentUser = authService.getCurrentUser() || fallbackUser;
+
+    setAuthToken(storedToken);
+    setUser(currentUser);
+    return currentUser;
+  };
 
   const register = async (userData) => {
     try {
       const response = await authService.register(userData);
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
-      return { success: true, data: response.data };
+      const authData = response?.data ?? null;
+      syncLocalAuthState(authData);
+      return { success: true, data: authData, message: response?.message };
     } catch (error) {
       return {
         success: false,
@@ -51,10 +70,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authService.login(credentials);
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
+      const authData = response?.data ?? null;
+      syncLocalAuthState(authData);
       refreshUser();
-      return { success: true, data: response.data };
+      return { success: true, data: authData, message: response?.message };
     } catch (error) {
       return {
         success: false,
@@ -66,10 +85,10 @@ export const AuthProvider = ({ children }) => {
   const googleLogin = async (idToken) => {
     try {
       const response = await authService.googleLogin(idToken);
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
+      const authData = response?.data ?? null;
+      syncLocalAuthState(authData);
       refreshUser();
-      return { success: true, data: response.data };
+      return { success: true, data: authData, message: response?.message };
     } catch (error) {
       return {
         success: false,
@@ -81,14 +100,14 @@ export const AuthProvider = ({ children }) => {
   const verifyEmailCode = async ({ email, code }) => {
     try {
       const response = await authService.verifyEmailCode({ email, code });
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
+      const authData = response?.data ?? null;
+      syncLocalAuthState(authData?.user ?? authData);
       refreshUser();
-      return { success: true, data: response.data, message: response.message };
+      return { success: true, data: authData, message: response?.message };
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || 'Erreur lors de la vérification du code'
+        message: error.response?.data?.message || 'Erreur lors de la verification du code'
       };
     }
   };
@@ -107,11 +126,14 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     authService.logout();
+    setAuthToken(null);
     setUser(null);
+    setLoading(false);
   };
 
   const setToken = (token, userData = null) => {
     localStorage.setItem('token', token);
+    setAuthToken(token);
     if (userData) {
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
@@ -129,7 +151,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     setToken,
     refreshUser,
-    isAuthenticated: !!user && !!localStorage.getItem('token')
+    isAuthenticated: !!authToken
   };
 
   return (

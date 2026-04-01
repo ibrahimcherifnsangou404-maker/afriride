@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Footer } from '../components/Layout/Footer';
 import { Card, Button, Input } from '../components/UI';
+import { authService } from '../services/api';
 import {
   getCookieConsent,
   acceptAllCookieConsent,
@@ -30,6 +31,14 @@ function SettingsPage() {
     marketing: existingConsent?.preferences?.marketing || false
   });
   const [cookieMsg, setCookieMsg] = useState('');
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   useEffect(() => {
     const loadServerConsent = async () => {
@@ -71,6 +80,48 @@ function SettingsPage() {
     setCookieMsg('Le bandeau cookies a ete reouvert.');
   };
 
+  const handlePasswordChange = (key, value) => {
+    setPasswordForm((prev) => ({ ...prev, [key]: value }));
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmNewPassword) {
+      setPasswordError('Veuillez remplir tous les champs du mot de passe.');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Le nouveau mot de passe doit contenir au moins 6 caracteres.');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
+      setPasswordError('La confirmation du mot de passe ne correspond pas.');
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      const response = await authService.updatePassword(passwordForm);
+      setPasswordSuccess(response?.message || 'Mot de passe mis a jour avec succes.');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: ''
+      });
+    } catch (error) {
+      setPasswordError(error?.response?.data?.message || 'Erreur lors de la mise a jour du mot de passe.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       <div className="bg-white border-b border-slate-200 py-12">
@@ -88,21 +139,46 @@ function SettingsPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Mot de passe actuel</label>
-                <Input type="password" placeholder="********" />
+                <Input
+                  type="password"
+                  placeholder="********"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Nouveau mot de passe</label>
-                <Input type="password" placeholder="********" />
+                <Input
+                  type="password"
+                  placeholder="********"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Confirmer le nouveau mot de passe</label>
-                <Input type="password" placeholder="********" />
+                <Input
+                  type="password"
+                  placeholder="********"
+                  value={passwordForm.confirmNewPassword}
+                  onChange={(e) => handlePasswordChange('confirmNewPassword', e.target.value)}
+                />
               </div>
-              <Button className="mt-2">Mettre a jour le mot de passe</Button>
-            </div>
+
+              {passwordError && (
+                <p className="text-sm text-red-600">{passwordError}</p>
+              )}
+              {passwordSuccess && (
+                <p className="text-sm text-emerald-700">{passwordSuccess}</p>
+              )}
+
+              <Button type="submit" className="mt-2" disabled={passwordLoading}>
+                {passwordLoading ? 'Mise a jour...' : 'Mettre a jour le mot de passe'}
+              </Button>
+            </form>
 
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 h-fit">
               <h3 className="font-bold text-slate-900 mb-2">Conseils de securite</h3>

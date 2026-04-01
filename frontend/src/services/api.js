@@ -114,8 +114,13 @@ export const authService = {
   },
 
   // Mettre à jour le profil
-  updateProfile: async (userData) => {
-    const response = await api.put('/auth/profile', userData);
+  
+  updatePassword: async ({ currentPassword, newPassword, confirmNewPassword }) => {
+    const response = await api.put('/auth/update-password', {
+      currentPassword,
+      newPassword,
+      confirmNewPassword
+    });
     return response.data;
   },
 
@@ -132,4 +137,5 @@ export const authService = {
 };
 
 export default api;
+
 

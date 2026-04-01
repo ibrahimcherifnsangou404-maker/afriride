@@ -76,6 +76,24 @@ export default function AdminNav() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  useEffect(() => {
+    setMobileOpen(false);
+    setProfileOpen(false);
+    setMoreOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   return (
     <>
       <nav ref={navRef} className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-40 shadow-sm">

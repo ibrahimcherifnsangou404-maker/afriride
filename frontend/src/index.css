@@ -28,6 +28,8 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -35,6 +37,10 @@ body {
   /* stylelint-disable-next-line at-rule-no-unknown */
   @apply text-slate-900;
   background: var(--ui-bg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 /* Typography */
@@ -56,13 +62,15 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #16a34a;
-  outline-offset: 2px;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
 }
 
 /* Buttons */
 button {
   /* stylelint-disable-next-line at-rule-no-unknown */
   @apply transition-all duration-200;
+  touch-action: manipulation;
 }
 
 /* Forms */
@@ -71,6 +79,15 @@ select,
 textarea {
   /* stylelint-disable-next-line at-rule-no-unknown */
   @apply transition-colors duration-200;
+  font: inherit;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
 }
 
 input:focus,

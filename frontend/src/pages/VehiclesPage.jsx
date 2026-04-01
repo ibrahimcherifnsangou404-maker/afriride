@@ -219,7 +219,7 @@ function VehiclesPage() {
                 size="md"
                 aria-expanded={showFilters}
                 aria-controls="vehicles-advanced-filters"
-                className="h-12 px-5 border-white text-white hover:bg-white/10"
+                className="h-12 px-5 border-white text-white bg-white/10 hover:bg-white/20 focus:ring-white/60"
               >
                 <Filter className="w-5 h-5 mr-2" />
                 Filtres

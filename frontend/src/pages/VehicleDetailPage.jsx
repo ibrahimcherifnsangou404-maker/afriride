@@ -461,12 +461,12 @@ function VehicleDetailPage() {
 
                 {/* Navigation Overlay */}
                 {images.length > 1 && (
-                  <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 flex items-center justify-between p-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
                       onClick={() => setSelectedImage((prev) => (prev - 1 + images.length) % images.length)}
                       aria-label="Image precedente"
-                      className="p-2 bg-white/20 backdrop-blur-md hover:bg-white text-white hover:text-slate-900 rounded-full transition-all"
+                      className="p-2 bg-white/80 backdrop-blur-md hover:bg-white text-slate-900 rounded-full transition-all"
                     >
                       <ChevronRight className="w-6 h-6 rotate-180" />
                     </button>
@@ -474,7 +474,7 @@ function VehicleDetailPage() {
                       type="button"
                       onClick={() => setSelectedImage((prev) => (prev + 1) % images.length)}
                       aria-label="Image suivante"
-                      className="p-2 bg-white/20 backdrop-blur-md hover:bg-white text-white hover:text-slate-900 rounded-full transition-all"
+                      className="p-2 bg-white/80 backdrop-blur-md hover:bg-white text-slate-900 rounded-full transition-all"
                     >
                       <ChevronRight className="w-6 h-6" />
                     </button>

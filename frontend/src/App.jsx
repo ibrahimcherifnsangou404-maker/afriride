@@ -68,6 +68,13 @@ function AppRoutes() {
     setNavigateRef(navigate);
   }, [navigate]);
 
+  // Ameliore la fluidite de navigation: nouvelle page demarre en haut.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname, location.search, location.hash]);
+
   return (
     <Suspense fallback={<PageLoader />}>
       <PageTransition>

@@ -10,7 +10,8 @@ const {
   resetPassword,
   confirmEmail,
   verifyEmailCode,
-  resendEmailCode
+  resendEmailCode,
+  updatePassword
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
@@ -27,5 +28,6 @@ router.get('/confirm-email/:token', confirmEmail);
 // Routes protégées (nécessitent un token)
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
+router.put('/update-password', protect, updatePassword);
 
 module.exports = router;

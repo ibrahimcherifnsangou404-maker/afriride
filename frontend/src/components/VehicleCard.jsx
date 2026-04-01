@@ -139,14 +139,14 @@ const VehicleCard = ({ vehicle, initialIsLiked = false, skipFavoriteCheck = fals
                             {/* Overlay Gradient */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                            {/* Navigation Arrows (visible on hover if multiple images) */}
+                            {/* Navigation Arrows (toujours visibles sur mobile, au survol sur desktop) */}
                             {images.length > 1 && (
-                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                                     <button
                                         type="button"
                                         onClick={prevImage}
                                         aria-label="Image precedente"
-                                        className="p-1.5 bg-white/80 hover:bg-white rounded-full text-slate-900 shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
+                                        className="p-1.5 bg-white/90 hover:bg-white rounded-full text-slate-900 shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </button>
@@ -154,7 +154,7 @@ const VehicleCard = ({ vehicle, initialIsLiked = false, skipFavoriteCheck = fals
                                         type="button"
                                         onClick={nextImage}
                                         aria-label="Image suivante"
-                                        className="p-1.5 bg-white/80 hover:bg-white rounded-full text-slate-900 shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
+                                        className="p-1.5 bg-white/90 hover:bg-white rounded-full text-slate-900 shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
                                     >
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
@@ -265,5 +265,6 @@ const VehicleCard = ({ vehicle, initialIsLiked = false, skipFavoriteCheck = fals
 };
 
 export default VehicleCard;
+
 
 

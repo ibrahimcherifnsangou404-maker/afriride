@@ -215,13 +215,13 @@ function CreateManager() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-green-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? 'Création en cours...' : 'Créer le gestionnaire'}
               </button>
               <Link
                 to="/admin/users"
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold text-center"
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 font-semibold text-center transition-colors"
               >
                 Annuler
               </Link>
