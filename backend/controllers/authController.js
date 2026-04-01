@@ -16,14 +16,29 @@ const buildEmailVerificationToken = (code) => {
     .update(String(code || '').trim())
     .digest('hex');
 
-  return `${hashedCode}:${expiresAt}`;
+  // Séparateur '|' pour éviter le conflit avec ':' dans les dates ISO (ex: 2026-04-01T06:13:05.000Z)
+  return `${hashedCode}|${expiresAt}`;
 };
 
 const parseEmailVerificationToken = (storedToken) => {
-  const [hashedCode, expiresAt] = String(storedToken || '').split(':');
-  if (!hashedCode || !expiresAt) {
+  const str = String(storedToken || '');
+  // Supporte l'ancien format ':' et le nouveau format '|'
+  const sepIndex = str.indexOf('|') !== -1 ? str.indexOf('|') : str.indexOf(':');
+  if (sepIndex === -1) return null;
+
+  const hashedCode = str.substring(0, sepIndex);
+  // Pour le nouveau format '|', la date est après '|'
+  // Pour l'ancien format ':', on reconstitue la date ISO complète
+  let expiresAt;
+  if (str.indexOf('|') !== -1) {
+    expiresAt = str.substring(sepIndex + 1);
+  } else {
+    // Ancien format cassé: on ne peut pas récupérer la date correctement
+    // On retourne null pour forcer un nouveau code
     return null;
   }
+
+  if (!hashedCode || !expiresAt) return null;
 
   const expireDate = new Date(expiresAt);
   if (Number.isNaN(expireDate.getTime())) {
