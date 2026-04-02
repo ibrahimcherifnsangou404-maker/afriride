@@ -1,6 +1,7 @@
 ﻿const { Vehicle, Agency, Category, Booking } = require('../models');
 const { Op } = require('sequelize');
 const { getPendingThresholdDate } = require('../services/bookingAvailabilityService');
+const { uploadVehicleImage } = require('../services/cloudinaryService');
 
 const isAgencyVerified = (agency) => agency?.verificationStatus === 'verified';
 
@@ -283,7 +284,12 @@ const createVehicle = async (req, res) => {
     // Traiter les images uploadÃ©es
     let images = [];
     if (req.files && req.files.length > 0) {
-      images = req.files.map(file => `/uploads/vehicles/${file.filename}`);
+      images = await Promise.all(
+        req.files.map(async (file) => {
+          const uploadResult = await uploadVehicleImage(file);
+          return uploadResult?.secure_url || `/uploads/vehicles/${file.filename}`;
+        })
+      );
     }
 
     // Traiter les features (si c'est une chaÃ®ne JSON)
@@ -384,7 +390,12 @@ const updateVehicle = async (req, res) => {
     // GÃ©rer les nouvelles images
     let newImages = [];
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      newImages = req.files.map(file => `/uploads/vehicles/${file.filename}`);
+      newImages = await Promise.all(
+        req.files.map(async (file) => {
+          const uploadResult = await uploadVehicleImage(file);
+          return uploadResult?.secure_url || `/uploads/vehicles/${file.filename}`;
+        })
+      );
     }
 
     // Combiner images existantes + nouvelles images

@@ -35,6 +35,23 @@ const saveToLocal = async (file) => {
   return { secure_url: `/uploads/messages/${name}`, local: true };
 };
 
+const saveVehicleToLocal = async (file) => {
+  if (file?.filename) {
+    return { secure_url: `/uploads/vehicles/${file.filename}`, local: true };
+  }
+
+  const dir = path.join('uploads', 'vehicles');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  const ext = path.extname(file.originalname || '');
+  const name = `vehicle-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+  const filePath = path.join(dir, name);
+  await fs.promises.writeFile(filePath, file.buffer);
+  return { secure_url: `/uploads/vehicles/${name}`, local: true };
+};
+
 const uploadMessageAttachment = (file) => new Promise((resolve, reject) => {
   try {
     ensureConfigured();
@@ -61,6 +78,41 @@ const uploadMessageAttachment = (file) => new Promise((resolve, reject) => {
   uploadStream.end(file.buffer);
 });
 
+const uploadVehicleImage = (file) => new Promise((resolve, reject) => {
+  try {
+    ensureConfigured();
+  } catch (err) {
+    if (String(err?.message || '').includes('Cloudinary config missing')) {
+      console.warn('Cloudinary non configurÃ©, sauvegarde locale du vehicule.');
+      return saveVehicleToLocal(file).then(resolve).catch(reject);
+    }
+    return reject(err);
+  }
+
+  const folder = process.env.CLOUDINARY_VEHICLES_FOLDER || 'afriride/vehicles';
+  cloudinary.uploader.upload(
+    file.path,
+    {
+      folder,
+      resource_type: 'image'
+    },
+    async (error, result) => {
+      if (error) return reject(error);
+
+      if (file.path) {
+        try {
+          await fs.promises.unlink(file.path);
+        } catch (unlinkError) {
+          console.warn('Impossible de supprimer le fichier local apres upload Cloudinary:', unlinkError.message);
+        }
+      }
+
+      return resolve(result);
+    }
+  );
+});
+
 module.exports = {
-  uploadMessageAttachment
+  uploadMessageAttachment,
+  uploadVehicleImage
 };
