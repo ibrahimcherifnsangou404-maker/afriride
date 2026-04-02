@@ -9,6 +9,9 @@ const isEmailConfigured = !!(
 );
 
 const isResendConfigured = !!process.env.RESEND_API_KEY;
+const APP_URL = process.env.FRONTEND_APP_URL || 'https://www.afriride.store';
+const DEFAULT_FROM = process.env.EMAIL_FROM || 'AfriRide <noreply@afriride.store>';
+const DEFAULT_REPLY_TO = process.env.EMAIL_REPLY_TO || 'support@afriride.store';
 
 // Configuration du transporteur email
 let transporter = null;
@@ -115,8 +118,14 @@ const sendEmailViaResend = async (mailOptions) => {
 };
 // Fonction helper pour envoyer un email
 const sendEmail = async (mailOptions) => {
+  const finalMailOptions = {
+    replyTo: DEFAULT_REPLY_TO,
+    ...mailOptions,
+    from: mailOptions.from || DEFAULT_FROM
+  };
+
   if (isResendConfigured) {
-    const result = await sendEmailViaResend(mailOptions);
+    const result = await sendEmailViaResend(finalMailOptions);
     if (result.success) {
       console.log('✅ Email envoyé (Resend):', result.messageId);
     } else {
@@ -130,7 +139,7 @@ const sendEmail = async (mailOptions) => {
     return { success: false, error: 'Service email non configuré' };
   }
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(finalMailOptions);
     console.log('✅ Email envoyé:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
@@ -200,7 +209,7 @@ const emailService = {
     `;
 
     return sendEmail({
-      from: process.env.EMAIL_FROM || 'noreply@afriride.com',
+      from: DEFAULT_FROM,
       to: user.email,
       subject: 'Code de verification AfriRide',
       html: htmlContent
@@ -250,6 +259,11 @@ const emailService = {
             <p style="margin: 0;"><strong>Vous pouvez maintenant commencer a louer des vehicules sur AfriRide.</strong></p>
           </div>
           <p>Connectez-vous a votre espace client pour parcourir les vehicules disponibles et effectuer votre premiere reservation.</p>
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="${APP_URL}/vehicles" style="display: inline-block; background: #059669; color: white; padding: 14px 28px; border-radius: 999px; text-decoration: none; font-weight: bold;">
+              Voir les vehicules disponibles
+            </a>
+          </div>
         </div>
         <div style="background: #333; padding: 20px; text-align: center; color: white;">
           <p style="margin: 0;">© 2026 AfriRide - Tous droits reserves</p>
