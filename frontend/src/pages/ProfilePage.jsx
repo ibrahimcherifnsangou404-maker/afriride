@@ -24,6 +24,8 @@ function ProfilePage() {
         city: '',
         country: ''
     });
+    const isKycVerified = user?.verificationStatus === 'verified';
+    const canStartRenting = isKycVerified && user?.role === 'client';
 
     useEffect(() => {
         if (user) {
@@ -88,11 +90,21 @@ function ProfilePage() {
                         <div className="text-center md:text-left flex-1">
                             <div className="flex flex-col md:flex-row items-center gap-3 mb-2">
                                 <h1 className="text-3xl font-bold text-slate-900">{user?.firstName} {user?.lastName}</h1>
-                                <Badge variant="success" className="mb-0">Client Vérifié</Badge>
+                                <Badge variant={isKycVerified ? 'success' : 'warning'} className="mb-0">
+                                    {isKycVerified ? 'Client Verifie' : 'Verification KYC requise'}
+                                </Badge>
                             </div>
                             <p className="text-slate-500 flex items-center justify-center md:justify-start gap-2 mb-4">
                                 <Mail className="w-4 h-4" /> {user?.email}
                             </p>
+                            <div className={`inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${
+                                canStartRenting ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                                <Shield className="w-4 h-4" />
+                                {canStartRenting
+                                    ? 'Votre compte est verifie. Vous pouvez commencer a louer.'
+                                    : 'Completez puis validez votre KYC pour commencer a louer.'}
+                            </div>
 
                             <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                                 <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-lg border border-slate-100">
@@ -140,15 +152,21 @@ function ProfilePage() {
                                     <CheckCircle className="w-5 h-5 text-green-500" />
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-600">Téléphone vérifié</span>
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                    <span className="text-slate-600">Verification KYC</span>
+                                    {isKycVerified ? (
+                                        <CheckCircle className="w-5 h-5 text-green-500" />
+                                    ) : (
+                                        <span className="text-xs font-semibold text-amber-600">En attente</span>
+                                    )}
                                 </div>
                                 <div className="pt-4 border-t border-slate-100">
                                     <Button variant="outline" size="sm" className="w-full">Changer mot de passe</Button>
                                 </div>
                                 <div>
                                     <Link to="/kyc" className="block">
-                                        <Button variant="outline" size="sm" className="w-full">Verifier mon identite (KYC)</Button>
+                                        <Button variant="outline" size="sm" className="w-full">
+                                            {isKycVerified ? 'Identite verifiee' : 'Verifier mon identite (KYC)'}
+                                        </Button>
                                     </Link>
                                 </div>
                             </div>

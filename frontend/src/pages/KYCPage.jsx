@@ -23,6 +23,9 @@ function KYCPage() {
     const [success, setSuccess] = useState('');
     const MAX_FILE_SIZE = 10 * 1024 * 1024;
     const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
+    const hasSubmittedDocuments = Boolean(
+        profile?.idCardFront || profile?.idCardBack || profile?.drivingLicense
+    );
 
     useEffect(() => {
         loadProfile();
@@ -99,6 +102,10 @@ function KYCPage() {
 
     if (loading) return <PageSkeleton variant="form" />;
 
+    const effectiveVerificationStatus = profile?.verificationStatus === 'pending' && !hasSubmittedDocuments
+        ? 'unverified'
+        : profile?.verificationStatus;
+
     const statusMap = {
         unverified: { color: 'bg-gray-100 text-gray-800', label: 'Non vérifié', icon: AlertCircle },
         pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Vérification en cours', icon: Clock },
@@ -106,7 +113,8 @@ function KYCPage() {
         rejected: { color: 'bg-red-100 text-red-800', label: 'Dossier rejeté', icon: X }
     };
 
-    const status = statusMap[profile?.verificationStatus] || statusMap.unverified;
+    const status = statusMap[effectiveVerificationStatus] || statusMap.unverified;
+    const isSubmissionLocked = submitting || effectiveVerificationStatus === 'pending';
 
     return (
         <div className="min-h-screen bg-slate-50 py-12">
@@ -128,7 +136,7 @@ function KYCPage() {
                                 <h2 className="text-xl font-bold text-slate-900">{status.label}</h2>
                             </div>
                         </div>
-                        {profile?.verificationStatus === 'verified' && (
+                        {effectiveVerificationStatus === 'verified' && (
                             <Badge variant="success" size="lg">Compte Certifié</Badge>
                         )}
                     </div>
@@ -143,7 +151,7 @@ function KYCPage() {
                     )}
                 </Card>
 
-                {profile?.verificationStatus === 'verified' ? (
+                {effectiveVerificationStatus === 'verified' ? (
                     <div className="bg-white p-12 rounded-3xl border border-slate-100 shadow-xl text-center">
                         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                             <CheckCircle className="w-10 h-10" />
@@ -287,14 +295,14 @@ function KYCPage() {
                         <Button
                             type="submit"
                             className="w-full py-4 text-lg font-bold shadow-xl"
-                            disabled={submitting || profile?.verificationStatus === 'pending'}
+                            disabled={isSubmissionLocked}
                         >
                             {submitting ? (
                                 <>
                                     <Loading size="sm" className="mr-2" />
                                     Envoi des documents...
                                 </>
-                            ) : profile?.verificationStatus === 'pending' ? (
+                            ) : isSubmissionLocked ? (
                                 'Documents en cours d\'examen'
                             ) : (
                                 'Envoyer pour vérification'

@@ -46,12 +46,47 @@ const sendEmailViaResend = async (mailOptions) => {
     return { success: false, error: 'EMAIL_FROM manquant' };
   }
 
+  const attachments = Array.isArray(mailOptions.attachments)
+    ? mailOptions.attachments
+        .map((attachment) => {
+          if (!attachment?.filename) {
+            return null;
+          }
+
+          try {
+            if (attachment.content) {
+              const buffer = Buffer.isBuffer(attachment.content)
+                ? attachment.content
+                : Buffer.from(attachment.content);
+
+              return {
+                filename: attachment.filename,
+                content: buffer.toString('base64')
+              };
+            }
+
+            if (attachment.path && fs.existsSync(attachment.path)) {
+              return {
+                filename: attachment.filename,
+                content: fs.readFileSync(attachment.path).toString('base64')
+              };
+            }
+          } catch (error) {
+            console.error('Erreur preparation piece jointe email:', error.message);
+          }
+
+          return null;
+        })
+        .filter(Boolean)
+    : [];
+
   const payload = {
     from,
     to: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
     subject: mailOptions.subject,
     html: mailOptions.html,
-    text: mailOptions.text
+    text: mailOptions.text,
+    attachments
   };
 
   const controller = new AbortController();
@@ -200,6 +235,35 @@ const emailService = {
     });
   },
 
+  sendKycApprovedEmail: async (user) => {
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; color: white;">
+          <h1>Identite verifiee</h1>
+          <p style="font-size: 18px; margin: 12px 0 0;">Votre compte client est maintenant valide</p>
+        </div>
+        <div style="padding: 40px; background: #f5f5f5;">
+          <p style="font-size: 16px; color: #333;">Bonjour ${user.firstName || ''},</p>
+          <p>Bonne nouvelle: votre verification KYC a ete approuvee avec succes.</p>
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <p style="margin: 0 0 12px;"><strong>Statut:</strong> Compte verifie</p>
+            <p style="margin: 0;"><strong>Vous pouvez maintenant commencer a louer des vehicules sur AfriRide.</strong></p>
+          </div>
+          <p>Connectez-vous a votre espace client pour parcourir les vehicules disponibles et effectuer votre premiere reservation.</p>
+        </div>
+        <div style="background: #333; padding: 20px; text-align: center; color: white;">
+          <p style="margin: 0;">© 2026 AfriRide - Tous droits reserves</p>
+        </div>
+      </div>
+    `;
+    return sendEmail({
+      from: process.env.EMAIL_FROM || 'noreply@afriride.com',
+      to: user.email,
+      subject: 'Compte verifie - Vous pouvez commencer a louer',
+      html: htmlContent
+    });
+  },
+
   sendBookingConfirmationEmail: async (booking, vehicle, user) => {
     const startDate = new Date(booking.startDate).toLocaleDateString('fr-FR');
     const endDate = new Date(booking.endDate).toLocaleDateString('fr-FR');
@@ -313,6 +377,44 @@ const emailService = {
         </div>
       `,
       attachments
+    });
+  },
+
+  sendContractAcceptanceNotification: async (user, booking, agency) => {
+    const startDate = booking?.startDate
+      ? new Date(booking.startDate).toLocaleDateString('fr-FR')
+      : 'N/A';
+    const endDate = booking?.endDate
+      ? new Date(booking.endDate).toLocaleDateString('fr-FR')
+      : 'N/A';
+    const vehicleLabel = booking?.vehicle
+      ? `${booking.vehicle.brand} ${booking.vehicle.model}`
+      : 'votre vehicule';
+
+    return sendEmail({
+      from: process.env.EMAIL_FROM || 'noreply@afriride.com',
+      to: user.email,
+      subject: `Contrat accepte - ${vehicleLabel}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; color: white;">
+            <h1>Contrat accepte</h1>
+          </div>
+          <div style="padding: 40px; background: #f5f5f5;">
+            <p>Bonjour ${user.firstName || ''},</p>
+            <p>Nous avons bien enregistre l'acceptation de votre contrat de location.</p>
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p><strong>Vehicule:</strong> ${vehicleLabel}</p>
+              <p><strong>Periode:</strong> du ${startDate} au ${endDate}</p>
+              <p><strong>Agence:</strong> ${agency?.name || 'AfriRide'}</p>
+            </div>
+            <p>Vous pouvez suivre la suite du dossier depuis votre espace client.</p>
+          </div>
+          <div style="background: #333; padding: 20px; text-align: center; color: white;">
+            <p style="margin: 0;">© 2026 AfriRide - Tous droits reserves</p>
+          </div>
+        </div>
+      `
     });
   },
 

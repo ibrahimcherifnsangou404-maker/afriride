@@ -895,6 +895,10 @@ const approveKYC = async (req, res) => {
       rejectionReason: null
     });
 
+    emailService.sendKycApprovedEmail(user).catch((err) =>
+      console.error('Erreur email validation KYC (admin):', err.message)
+    );
+
     res.status(200).json({
       success: true,
       message: 'Utilisateur vérifié avec succès',
