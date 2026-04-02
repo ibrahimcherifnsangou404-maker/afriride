@@ -15,12 +15,23 @@ const { initSocket } = require('./socket');
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = [
+  'https://afriride-frontend.onrender.com',
+  'http://localhost:5173',
+  ...(process.env.FRONTEND_URLS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+];
+
 // Middleware
 app.use(cors({
-  origin: [
-    'https://afriride-frontend.onrender.com',
-    'http://localhost:5173'
-  ],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS non autorise pour cette origine: ${origin}`));
+  },
   credentials: true
 }));
 app.use(express.json());
