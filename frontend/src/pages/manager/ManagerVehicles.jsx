@@ -1,8 +1,9 @@
-import { useState, useEffect, useContext } from 'react';
+﻿import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Car, Plus, Edit, Trash2, Eye, Search, Filter, Fuel, Calendar, Wrench, RotateCcw, ShieldAlert } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { vehicleService } from '../../services/vehicleService';
+import { useToast } from '../../context/ToastContext';
 import { AuthContext } from '../../context/AuthContext';
 import { TableSkeleton } from '../../components/UI';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -128,6 +129,7 @@ const VehicleCard = ({ vehicle, onDelete, onToggleAvailability, updatingAvailabi
 };
 
 function ManagerVehicles() {
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useContext(AuthContext);
 
@@ -187,7 +189,7 @@ function ManagerVehicles() {
       }
     } catch (error) {
       console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression');
+      addToast('Erreur lors de la suppression', 'error');
     } finally {
       setDeleting(false);
     }
@@ -210,7 +212,7 @@ function ManagerVehicles() {
       }
     } catch (error) {
       console.error('Erreur mise a jour disponibilite:', error);
-      alert(error.response?.data?.message || 'Erreur lors de la mise a jour de la disponibilite');
+      addToast(error.response?.data?.message || 'Erreur lors de la mise a jour de la disponibilite', 'error');
     } finally {
       setAvailabilityLoadingId(null);
     }

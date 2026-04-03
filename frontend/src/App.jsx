@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { setNavigateRef } from './utils/navigate';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/Navigation';
 import CookieConsentBanner from './components/CookieConsentBanner';
@@ -244,13 +245,15 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
-        <Navigation />
-        <div className="min-h-screen bg-slate-50">
-          <AppRoutes />
-        </div>
-        <CookieConsentBanner />
-      </Router>
+      <ToastProvider>
+        <Router>
+          <Navigation />
+          <div className="min-h-screen bg-slate-50">
+            <AppRoutes />
+          </div>
+          <CookieConsentBanner />
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

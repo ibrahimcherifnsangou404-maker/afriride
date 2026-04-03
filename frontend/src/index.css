@@ -189,6 +189,12 @@ textarea:focus {
   animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* --- Toast progress bar --- */
+@keyframes toast-shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
 /* --- Skeleton shimmer loader --- */
 @keyframes shimmer {
   from { background-position: -200% 0; }

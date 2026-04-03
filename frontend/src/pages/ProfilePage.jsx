@@ -1,4 +1,5 @@
 ﻿import { useState, useContext, useEffect } from 'react';
+import { useToast } from '../context/ToastContext';
 import { Link } from 'react-router-dom';
 import {
     User, Mail, Phone, Camera, Save, MapPin,
@@ -65,7 +66,7 @@ function ProfilePage() {
             }
         } catch (error) {
             console.error('Erreur mise à jour:', error);
-            alert('Erreur lors de la mise à jour du profil.');
+            addToast('Erreur lors de la mise a jour du profil', 'error');
         } finally {
             setLoading(false);
         }

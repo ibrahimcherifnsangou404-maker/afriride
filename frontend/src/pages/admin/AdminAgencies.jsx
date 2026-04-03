@@ -7,6 +7,7 @@ import { Skeleton } from "../../components/UI";
 import ConfirmModal from "../../components/ConfirmModal";
 
 function AdminAgencies() {
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useContext(AuthContext);
@@ -57,11 +58,11 @@ function AdminAgencies() {
     try {
       setRepublishingId(agency.id);
       await adminService.approveAgencyKyc(agency.id);
-      alert("Vehicules de " + agency.name + " republies avec succes !");
+      addToast("Vehicules de " + agency.name + " republies avec succes !", 'success');
       await loadAgencies();
     } catch (error) {
       console.error("Erreur republication:", error);
-      alert(error.response?.data?.message || "Erreur lors de la republication des vehicules");
+      addToast(error.response?.data?.message || "Erreur lors de la republication des vehicules", "error");
     } finally {
       setRepublishingId(null);
     }
@@ -86,16 +87,16 @@ function AdminAgencies() {
     try {
       if (editingAgency) {
         await adminService.updateAgency(editingAgency.id, formData);
-        alert("Agence mise a jour avec succes");
+        addToast("Agence mise a jour avec succes", "success");
       } else {
         await adminService.createAgency(formData);
-        alert("Agence creee avec succes");
+        addToast("Agence creee avec succes", "success");
       }
       loadAgencies();
       handleCloseModal();
     } catch (error) {
       console.error("Erreur:", error);
-      alert(error.response?.data?.message || "Erreur lors de l operation");
+      addToast(error.response?.data?.message || "Erreur lors de l operation", "error");
     }
   };
 
@@ -107,12 +108,12 @@ function AdminAgencies() {
     try {
       setDeleting(true);
       await adminService.deleteAgency(deleteModal.agencyId);
-      alert("Agence supprimee avec succes");
+      addToast("Agence supprimee avec succes", "success");
       setDeleteModal({ isOpen: false, agencyId: null, agencyName: "" });
       loadAgencies();
     } catch (error) {
       console.error("Erreur suppression:", error);
-      alert(error.response?.data?.message || "Erreur lors de la suppression");
+      addToast(error.response?.data?.message || "Erreur lors de la suppression", "error");
     } finally {
       setDeleting(false);
     }

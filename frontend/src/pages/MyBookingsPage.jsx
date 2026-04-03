@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+﻿import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Car, Calendar, MapPin, Clock, XCircle, CheckCircle, AlertCircle, Star,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 import { reviewService } from '../services/reviewService';
+import { useToast } from '../context/ToastContext';
 import { AuthContext } from '../context/AuthContext';
 import BookingContracts from '../components/BookingContracts';
 import { Footer } from '../components/Layout/Footer';
@@ -14,6 +15,7 @@ import { API_BASE_URL } from '../services/api';
 
 
 function MyBookingsPage() {
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const { isAuthenticated } = useContext(AuthContext);
 
@@ -98,7 +100,7 @@ function MyBookingsPage() {
 
       const reason = window.prompt('Raison d annulation (obligatoire, 5 caracteres minimum):', '');
       if (!reason || reason.trim().length < 5) {
-        alert('Veuillez renseigner une raison valide (minimum 5 caracteres).');
+        addToast('Veuillez renseigner une raison valide (minimum 5 caracteres)', 'warning');
         return;
       }
 
@@ -107,13 +109,13 @@ function MyBookingsPage() {
         const cancellation = response?.data?.cancellation;
         if (cancellation) {
           const refunded = Number(cancellation.refundAmount || 0).toLocaleString('fr-FR');
-          alert(`Reservation annulee. Remboursement applique: ${refunded} FCFA`);
+          addToast(`Reservation annulee. Remboursement applique: ${refunded} FCFA`, 'success');
         }
         loadBookings();
       }
     } catch (error) {
       console.error('Erreur annulation réservation:', error);
-      alert(error.response?.data?.message || 'Erreur lors de l annulation');
+      addToast(error.response?.data?.message || 'Erreur lors de l annulation', 'error');
     }
   };
 
@@ -130,7 +132,7 @@ function MyBookingsPage() {
         loadBookings();
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Erreur lors de l\'envoi');
+      addToast(error.response?.data?.message || 'Erreur lors de l\'envoi');
     }
   };
 
@@ -159,7 +161,7 @@ function MyBookingsPage() {
         loadBookings();
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Erreur lors de la demande d approbation');
+      addToast(error.response?.data?.message || 'Erreur lors de la demande d approbation', 'error');
     }
   };
 

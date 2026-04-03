@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, useContext } from 'react';
+﻿import { useToast } from "../../context/ToastContext";
+import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Car, Plus, Edit, Trash2, Tag, TrendingUp, Calendar, 
@@ -9,6 +10,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { PageSkeleton } from '../../components/UI';
 
 function AdminPromoCodes() {
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useContext(AuthContext);
 
@@ -46,7 +48,7 @@ function AdminPromoCodes() {
       setPromoCodes(response.data || []);
     } catch (error) {
       console.error('Erreur chargement codes promo:', error);
-      alert('Erreur lors du chargement des codes promo');
+      addToast('Erreur lors du chargement des codes promo', 'success');
       setPromoCodes([]);
     } finally {
       setLoading(false);
@@ -57,7 +59,7 @@ function AdminPromoCodes() {
     e.preventDefault();
 
     if (!formData.code || !formData.discountValue) {
-      alert('Le code et la valeur de réduction sont requis');
+      addToast('Le code et la valeur de réduction sont requis', 'success');
       return;
     }
 
@@ -76,14 +78,14 @@ function AdminPromoCodes() {
       const response = await promoCodeService.createPromoCode(dataToSend);
 
       if (response.success) {
-        alert('œ… Code promo créé avec succès !');
+        addToast('œ… Code promo créé avec succès !', 'success');
         setShowCreateModal(false);
         resetForm();
         loadPromoCodes();
       }
     } catch (error) {
       console.error('Erreur création:', error);
-      alert(error.response?.data?.message || 'Erreur lors de la création');
+      addToast(error.response?.data?.message || 'Erreur lors de la création', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -104,14 +106,14 @@ function AdminPromoCodes() {
       const response = await promoCodeService.updatePromoCode(selectedPromo.id, updates);
 
       if (response.success) {
-        alert('œ… Code promo mis à jour avec succès !');
+        addToast('œ… Code promo mis à jour avec succès !', 'success');
         setShowEditModal(false);
         setSelectedPromo(null);
         loadPromoCodes();
       }
     } catch (error) {
       console.error('Erreur mise à jour:', error);
-      alert('Erreur lors de la mise à jour');
+      addToast('Erreur lors de la mise à jour', 'success');
     } finally {
       setSubmitting(false);
     }
@@ -124,11 +126,11 @@ function AdminPromoCodes() {
 
     try {
       await promoCodeService.deletePromoCode(id);
-      alert('œ… Code promo supprimé avec succès !');
+      addToast('œ… Code promo supprimé avec succès !', 'success');
       loadPromoCodes();
     } catch (error) {
       console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression');
+      addToast('Erreur lors de la suppression', 'success');
     }
   };
 
@@ -140,7 +142,7 @@ function AdminPromoCodes() {
       setShowUsagesModal(true);
     } catch (error) {
       console.error('Erreur chargement utilisations:', error);
-      alert('Erreur lors du chargement des utilisations');
+      addToast('Erreur lors du chargement des utilisations', 'success');
     }
   };
 

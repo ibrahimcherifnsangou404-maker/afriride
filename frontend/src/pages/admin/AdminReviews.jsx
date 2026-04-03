@@ -1,131 +1,111 @@
-import { useState, useEffect, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Car, Star, Check, Trash2, MessageSquare } from 'lucide-react';
-import { reviewService } from '../../services/reviewService';
-import { AuthContext } from '../../context/AuthContext';
-import { TableSkeleton } from '../../components/UI';
-import ConfirmModal from '../../components/ConfirmModal';
+ï»¿import { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { Star, Check, Trash2, MessageSquare } from "lucide-react";
+import { reviewService } from "../../services/reviewService";
+import { AuthContext } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
+import { Skeleton } from "../../components/UI";
+import ConfirmModal from "../../components/ConfirmModal";
 
 function AdminReviews() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useContext(AuthContext);
+  const { addToast } = useToast();
 
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, reviewId: null });
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'admin') {
-      navigate('/login');
-      return;
-    }
+    if (!isAuthenticated || user?.role !== "admin") { navigate("/login"); return; }
     loadReviews();
   }, [isAuthenticated, user, navigate]);
 
   const loadReviews = async () => {
     try {
       setLoading(true);
-      const response = await reviewService.getAllReviews();
-      // La réponse peut être { success, count, data } ou directement { data: [...] }
-      const data = response?.data ?? response?.data ?? response ?? [];
-      const items = Array.isArray(data) ? data : (data.data ?? data);
-      setReviews(Array.isArray(items) ? items : []);
+      const res = await reviewService.getAllReviews();
+      setReviews(res.data || []);
     } catch (error) {
-      console.error('Erreur chargement avis:', error);
+      console.error("Erreur chargement avis:", error);
+      addToast("Erreur lors du chargement des avis", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (reviewId) => {
+  const handleApprove = async (id) => {
     try {
-      const res = await reviewService.approveReview(reviewId);
-      if (res?.message) alert(res.message);
-      else alert('Avis approuvé avec succès');
-      await loadReviews();
+      const res = await reviewService.approveReview(id);
+      addToast(res?.message || "Avis approuve avec succes", "success");
+      loadReviews();
     } catch (error) {
-      console.error('Erreur approbation:', error);
-      alert(error.response?.data?.message || 'Erreur lors de l\'approbation');
+      console.error("Erreur approbation avis:", error);
+      addToast(error.response?.data?.message || "Erreur lors de l approbation", "error");
     }
   };
 
-  const handleDeleteClick = (reviewId) => {
-    setDeleteModal({ isOpen: true, reviewId });
+  const handleDeleteClick = (id) => {
+    setDeleteModal({ isOpen: true, reviewId: id });
   };
 
   const handleDeleteConfirm = async () => {
     try {
       setDeleting(true);
       await reviewService.deleteReview(deleteModal.reviewId);
-      loadReviews();
+      addToast("Avis supprime avec succes", "success");
       setDeleteModal({ isOpen: false, reviewId: null });
-      alert('Avis supprimé avec succès');
+      loadReviews();
     } catch (error) {
-      console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression');
+      console.error("Erreur suppression avis:", error);
+      addToast("Erreur lors de la suppression", "error");
     } finally {
       setDeleting(false);
     }
   };
 
-  const filteredReviews = reviews.filter(review => {
-    if (filter === 'all') return true;
-    if (filter === 'approved') return review.isApproved;
-    if (filter === 'pending') return !review.isApproved;
+  const filteredReviews = reviews.filter((r) => {
+    if (filter === "approved") return r.isApproved;
+    if (filter === "pending") return !r.isApproved;
     return true;
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}\n{/* Contenu */}
       <div className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Modération des avis</h1>
-          <p className="text-gray-600">Approuvez ou supprimez les avis clients</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestion des avis</h1>
+            <p className="text-gray-600">Moderez les avis clients</p>
+          </div>
         </div>
 
-        {/* Filtres */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex gap-3 mb-6">
+          {["all", "pending", "approved"].map((f) => (
             <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg font-semibold ${
-                filter === 'all'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              key={f}
+              onClick={() => setFilter(f)}
+              className={"px-4 py-2 rounded-lg text-sm font-medium transition " + (filter === f ? "bg-primary text-white" : "bg-white text-gray-600 border hover:bg-gray-50")}
             >
-              Tous ({reviews.length})
+              {f === "all" ? "Tous (" + reviews.length + ")" : f === "pending" ? "En attente (" + reviews.filter((r) => !r.isApproved).length + ")" : "Approuves (" + reviews.filter((r) => r.isApproved).length + ")"}
             </button>
-            <button
-              onClick={() => setFilter('pending')}
-              className={`px-4 py-2 rounded-lg font-semibold ${
-                filter === 'pending'
-                  ? 'bg-yellow-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              En attente ({reviews.filter(r => !r.isApproved).length})
-            </button>
-            <button
-              onClick={() => setFilter('approved')}
-              className={`px-4 py-2 rounded-lg font-semibold ${
-                filter === 'approved'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Approuvés ({reviews.filter(r => r.isApproved).length})
-            </button>
-          </div>
+          ))}
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <TableSkeleton rows={6} columns={6} />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow p-6">
+                <Skeleton className="h-6 w-1/3 mb-3" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ))}
           </div>
+        ) : filteredReviews.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">Aucun avis dans cette categorie.</div>
         ) : (
           <div className="space-y-4">
             {filteredReviews.map((review) => (
@@ -138,38 +118,27 @@ function AdminReviews() {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-800">
-                          {review.user.firstName} {review.user.lastName}
+                          {review.user?.firstName} {review.user?.lastName}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(review.createdAt).toLocaleDateString('fr-FR')}
+                          {new Date(review.createdAt).toLocaleDateString("fr-FR")}
                         </p>
                       </div>
-                      <span className={`ml-4 px-3 py-1 rounded-full text-sm font-semibold ${
-                        review.isApproved
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {review.isApproved ? 'Approuvé' : 'En attente'}
+                      <span className={"ml-4 px-3 py-1 rounded-full text-sm font-semibold " + (review.isApproved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
+                        {review.isApproved ? "Approuve" : "En attente"}
                       </span>
                     </div>
 
                     <div className="mb-3">
-                      <p className="text-gray-600 text-sm mb-1">Véhicule</p>
+                      <p className="text-gray-600 text-sm mb-1">Vehicule</p>
                       <p className="font-semibold">
-                        {review.vehicle.brand} {review.vehicle.model} ({review.vehicle.year})
+                        {review.vehicle?.brand} {review.vehicle?.model} ({review.vehicle?.year})
                       </p>
                     </div>
 
                     <div className="flex items-center mb-3">
                       {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-5 h-5 ${
-                            i < review.rating
-                              ? 'text-yellow-400 fill-current'
-                              : 'text-gray-300'
-                          }`}
-                        />
+                        <Star key={i} className={"w-5 h-5 " + (i < review.rating ? "text-yellow-400 fill-current" : "text-gray-300")} />
                       ))}
                       <span className="ml-2 text-gray-600">({review.rating}/5)</span>
                     </div>
@@ -185,7 +154,7 @@ function AdminReviews() {
                     {!review.isApproved && (
                       <button
                         onClick={() => handleApprove(review.id)}
-                        className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                        className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
                         title="Approuver"
                       >
                         <Check className="w-5 h-5" />
@@ -193,7 +162,7 @@ function AdminReviews() {
                     )}
                     <button
                       onClick={() => handleDeleteClick(review.id)}
-                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                       title="Supprimer"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -206,13 +175,12 @@ function AdminReviews() {
         )}
       </div>
 
-      {/* Modal Confirmation Suppression */}
       <ConfirmModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, reviewId: null })}
         onConfirm={handleDeleteConfirm}
-        title="Supprimer l'avis"
-        message="Êtes-vous sûr de vouloir supprimer cet avis ? Cette action est irréversible."
+        title="Supprimer l avis"
+        message="Etes-vous sur de vouloir supprimer cet avis ? Cette action est irreversible."
         loading={deleting}
       />
     </div>
@@ -220,6 +188,3 @@ function AdminReviews() {
 }
 
 export default AdminReviews;
-
-
-
