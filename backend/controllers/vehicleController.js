@@ -4,6 +4,15 @@ const { getPendingThresholdDate } = require('../services/bookingAvailabilityServ
 const { uploadVehicleImage } = require('../services/cloudinaryService');
 
 const isAgencyVerified = (agency) => agency?.verificationStatus === 'verified';
+const parseBooleanInput = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+  }
+  return undefined;
+};
 
 // @desc    RÃ©cupÃ©rer tous les vÃ©hicules avec filtres
 // @route   GET /api/vehicles
@@ -399,15 +408,15 @@ const updateVehicle = async (req, res) => {
     }
 
     // Combiner images existantes + nouvelles images
-    let allImages = [];
-    if (existingImages) {
+    let allImages = vehicle.images || [];
+    if (existingImages !== undefined) {
       try {
         const existing = typeof existingImages === 'string'
           ? JSON.parse(existingImages)
           : existingImages;
         allImages = Array.isArray(existing) ? existing : [];
       } catch (error) {
-        allImages = [];
+        allImages = vehicle.images || [];
       }
     }
     allImages = [...allImages, ...newImages];
@@ -423,7 +432,9 @@ const updateVehicle = async (req, res) => {
     }
 
     // Mettre Ã  jour le vÃ©hicule
-    if (isAvailable !== undefined && isAvailable === 'true' && !isAgencyVerified(agency)) {
+    const parsedAvailability = parseBooleanInput(isAvailable);
+
+    if (parsedAvailability === true && !isAgencyVerified(agency)) {
       return res.status(403).json({
         success: false,
         message: 'Publication impossible tant que l\'agence n\'est pas vÃ©rifiÃ©e'
@@ -441,8 +452,8 @@ const updateVehicle = async (req, res) => {
       fuelType: fuelType || vehicle.fuelType,
       pricePerDay: pricePerDay ? parseFloat(pricePerDay) : vehicle.pricePerDay,
       categoryId: categoryId || vehicle.categoryId,
-      isAvailable: isAvailable !== undefined
-        ? (isAvailable === 'true' && isAgencyVerified(agency))
+      isAvailable: parsedAvailability !== undefined
+        ? (parsedAvailability && isAgencyVerified(agency))
         : vehicle.isAvailable,
       images: allImages,
       features: featuresArray
