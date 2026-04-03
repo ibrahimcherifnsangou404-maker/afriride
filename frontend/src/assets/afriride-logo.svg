@@ -1,0 +1,22 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="afriride-bg" x1="32" y1="24" x2="224" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+    <linearGradient id="afriride-road" x1="84" y1="154" x2="181" y2="154" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#DCFCE7"/>
+    </linearGradient>
+  </defs>
+  <rect x="20" y="20" width="216" height="216" rx="56" fill="url(#afriride-bg)"/>
+  <path d="M74 154C74 126.386 96.3858 104 124 104H132C159.614 104 182 126.386 182 154V158C182 160.209 180.209 162 178 162H78C75.7909 162 74 160.209 74 158V154Z" fill="url(#afriride-road)"/>
+  <path d="M93 149L109 119C110.397 116.379 113.123 114.743 116.093 114.743H144.691C147.725 114.743 150.496 116.451 151.858 119.162L167 149H93Z" fill="#0F172A"/>
+  <path d="M103 124H157L165 140H95L103 124Z" fill="#38BDF8"/>
+  <circle cx="108" cy="162" r="14" fill="#0F172A"/>
+  <circle cx="148" cy="162" r="14" fill="#0F172A"/>
+  <circle cx="108" cy="162" r="6" fill="#E2E8F0"/>
+  <circle cx="148" cy="162" r="6" fill="#E2E8F0"/>
+  <path d="M62 86C92 59 123 48 161 50" stroke="#DCFCE7" stroke-width="10" stroke-linecap="round" opacity="0.95"/>
+  <path d="M144 42L169 48L155 69" stroke="#DCFCE7" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+</svg>

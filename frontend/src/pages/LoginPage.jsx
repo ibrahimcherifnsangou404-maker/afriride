@@ -14,7 +14,7 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { authService } from '../services/api';
 import { Alert } from '../components/UI';
-import logo from '../assets/afriride-logo.png';
+import logo from '../assets/afriride-logo.svg';
 
 function LoginPage() {
   const navigate = useNavigate();

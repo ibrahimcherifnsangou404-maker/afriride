@@ -2,7 +2,7 @@
 import { Menu, X, LogOut, User } from 'lucide-react';
 import { useContext, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import logo from '../../assets/afriride-logo.png';
+import logo from '../../assets/afriride-logo.svg';
 
 export function Header() {
   const { isAuthenticated, user, logout } = useContext(AuthContext);

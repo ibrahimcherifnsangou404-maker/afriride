@@ -1,6 +1,6 @@
 import { MapPin, Mail, Phone, Linkedin, Twitter, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logo from '../../assets/afriride-logo.png';
+import logo from '../../assets/afriride-logo.svg';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();

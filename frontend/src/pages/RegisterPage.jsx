@@ -4,7 +4,7 @@ import { Mail, Lock, User, Phone, AlertCircle } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { Footer } from '../components/Layout/Footer';
 import { Card, Button, InputField, Alert } from '../components/UI';
-import logo from '../assets/afriride-logo.png';
+import logo from '../assets/afriride-logo.svg';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
