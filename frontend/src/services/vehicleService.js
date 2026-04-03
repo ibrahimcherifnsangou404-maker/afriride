@@ -27,6 +27,12 @@ export const vehicleService = {
     return response.data;
   },
 
+  // Mettre a jour rapidement la disponibilite catalogue d'un vehicule
+  updateVehicleAvailability: async (id, isAvailable) => {
+    const response = await api.put(`/vehicles/${id}`, { isAvailable });
+    return response.data;
+  },
+
   // Récupérer toutes les catégories
   getCategories: async () => {
     const response = await api.get('/categories');

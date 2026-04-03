@@ -6,7 +6,7 @@ import { contractService } from '../../services/contractService';
 import { AuthContext } from '../../context/AuthContext';
 import { TableSkeleton } from '../../components/UI';
 import { Toast } from '../../components/Toast';
-import { API_BASE_URL } from '../../services/api';
+import { resolveMediaUrl } from '../../utils/media';
 
 export default function ManagerBookings() {
   const navigate = useNavigate();
@@ -273,7 +273,7 @@ export default function ManagerBookings() {
                     <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0">
                       {booking.vehicle?.images?.[0] ? (
                         <img
-                          src={`${API_BASE_URL}${booking.vehicle.images[0]}`}
+                          src={resolveMediaUrl(booking.vehicle.images[0])}
                           alt={`${booking.vehicle?.brand || 'Vehicule'} ${booking.vehicle?.model || ''}`.trim()}
                           loading="lazy"
                           decoding="async"

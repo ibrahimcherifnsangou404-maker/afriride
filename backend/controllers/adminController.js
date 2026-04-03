@@ -732,9 +732,14 @@ const approveAgencyKyc = async (req, res) => {
       verifiedAt: new Date()
     });
 
+    await Vehicle.update(
+      { isAvailable: true },
+      { where: { agencyId: agency.id } }
+    );
+
     return res.status(200).json({
       success: true,
-      message: 'Agence verifiee avec succes',
+      message: 'Agence verifiee avec succes et vehicules republies',
       data: {
         id: agency.id,
         verificationStatus: agency.verificationStatus,

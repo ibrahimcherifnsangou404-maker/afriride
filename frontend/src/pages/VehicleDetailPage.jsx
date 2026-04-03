@@ -12,7 +12,7 @@ import { promoCodeService } from '../services/promoCodeService';
 import { favoriteService } from '../services/favoriteService'; // IMPORT
 import { AuthContext } from '../context/AuthContext';
 import { Badge, Button, Card, Loading, EmptyState, Skeleton } from '../components/UI';
-import { API_BASE_URL } from '../services/api';
+import { resolveMediaUrl } from '../utils/media';
 
 
 function VehicleDetailPage() {
@@ -187,11 +187,6 @@ function VehicleDetailPage() {
       checkFavorite();
     }
   }, [isAuthenticated, id, checkFavorite]);
-
-  const getImageUrl = (path) => {
-    if (!path) return null;
-    return path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
-  };
 
   const calculateTotal = () => {
     if (!bookingData.startDate || !bookingData.endDate || !vehicle) {
@@ -374,8 +369,8 @@ function VehicleDetailPage() {
   }
 
   const images = vehicle.images && vehicle.images.length > 0
-    ? vehicle.images.map(getImageUrl)
-    : [getImageUrl(vehicle.image)];
+    ? vehicle.images.map(resolveMediaUrl).filter(Boolean)
+    : [resolveMediaUrl(vehicle.image)].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 lg:pb-20">

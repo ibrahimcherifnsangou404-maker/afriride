@@ -1,20 +1,20 @@
 import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, Plus, Edit, Trash2, Eye, Search, Filter, Fuel, Calendar } from 'lucide-react';
+import { Car, Plus, Edit, Trash2, Eye, Search, Filter, Fuel, Calendar, Wrench, RotateCcw } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { vehicleService } from '../../services/vehicleService';
 import { AuthContext } from '../../context/AuthContext';
 import { TableSkeleton } from '../../components/UI';
 import ConfirmModal from '../../components/ConfirmModal';
-import { API_BASE_URL } from '../../services/api';
+import { resolveMediaUrl } from '../../utils/media';
 
-const VehicleCard = ({ vehicle, onDelete }) => {
+const VehicleCard = ({ vehicle, onDelete, onToggleAvailability, updatingAvailability }) => {
   return (
     <div className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group">
       <div className="h-56 relative overflow-hidden bg-slate-100">
         {vehicle.images && vehicle.images.length > 0 ? (
           <img
-            src={`${API_BASE_URL}${vehicle.images[0]}`}
+            src={resolveMediaUrl(vehicle.images[0])}
             alt={`${vehicle.brand} ${vehicle.model}`}
             loading="lazy"
             decoding="async"
@@ -54,6 +54,21 @@ const VehicleCard = ({ vehicle, onDelete }) => {
           </div>
         </div>
 
+        <div className={`rounded-2xl border px-4 py-3 mb-4 ${
+          vehicle.isAvailable
+            ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+            : 'border-amber-200 bg-amber-50 text-amber-900'
+        }`}>
+          <p className="text-sm font-bold">
+            {vehicle.isAvailable ? 'Visible dans le catalogue' : 'Retire du catalogue'}
+          </p>
+          <p className="text-xs font-medium mt-1 opacity-80">
+            {vehicle.isAvailable
+              ? 'Les clients peuvent voir ce vehicule et le reserver.'
+              : 'Pratique pour une maintenance, une panne ou une indisponibilite temporaire.'}
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-2 my-4">
           <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
             <Calendar className="w-4 h-4 text-slate-400" />
@@ -64,6 +79,25 @@ const VehicleCard = ({ vehicle, onDelete }) => {
             <span className="text-sm font-bold text-slate-700 capitalize">{vehicle.fuelType || 'Essence'}</span>
           </div>
         </div>
+
+        <button
+          onClick={() => onToggleAvailability(vehicle)}
+          disabled={updatingAvailability}
+          className={`w-full flex items-center justify-center gap-2 p-3 rounded-2xl font-bold transition-colors ${
+            vehicle.isAvailable
+              ? 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+              : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
+          } disabled:opacity-60 disabled:cursor-not-allowed`}
+        >
+          {vehicle.isAvailable ? <Wrench className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
+          <span>
+            {updatingAvailability
+              ? 'Mise a jour...'
+              : vehicle.isAvailable
+                ? 'Retirer du catalogue'
+                : 'Remettre en ligne'}
+          </span>
+        </button>
 
         <div className="flex gap-2 mt-2 pt-4 border-t border-slate-100">
           <Link
@@ -106,6 +140,7 @@ function ManagerVehicles() {
     vehicleName: ''
   });
   const [deleting, setDeleting] = useState(false);
+  const [availabilityLoadingId, setAvailabilityLoadingId] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated || (user?.role !== 'manager' && user?.role !== 'admin')) {
@@ -152,6 +187,29 @@ function ManagerVehicles() {
     }
   };
 
+  const handleToggleAvailability = async (vehicle) => {
+    try {
+      setAvailabilityLoadingId(vehicle.id);
+      const nextAvailability = !vehicle.isAvailable;
+      const response = await vehicleService.updateVehicleAvailability(vehicle.id, nextAvailability);
+
+      if (response.success) {
+        setVehicles((currentVehicles) =>
+          currentVehicles.map((currentVehicle) =>
+            currentVehicle.id === vehicle.id
+              ? { ...currentVehicle, isAvailable: nextAvailability }
+              : currentVehicle
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Erreur mise a jour disponibilite:', error);
+      alert(error.response?.data?.message || 'Erreur lors de la mise a jour de la disponibilite');
+    } finally {
+      setAvailabilityLoadingId(null);
+    }
+  };
+
   const filteredVehicles = vehicles.filter(
     (v) =>
       v.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -164,7 +222,7 @@ function ManagerVehicles() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Mes vehicules</h1>
-            <p className="text-slate-500 font-medium">Gerez votre flotte et ses disponibilites</p>
+            <p className="text-slate-500 font-medium">Gerez votre flotte et retirez un vehicule du catalogue sans le supprimer</p>
           </div>
           <Link
             to="/manager/vehicles/add"
@@ -199,7 +257,13 @@ function ManagerVehicles() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
             {filteredVehicles.map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} onDelete={handleDeleteClick} />
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                onDelete={handleDeleteClick}
+                onToggleAvailability={handleToggleAvailability}
+                updatingAvailability={availabilityLoadingId === vehicle.id}
+              />
             ))}
           </div>
         )}

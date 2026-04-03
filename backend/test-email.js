@@ -3,174 +3,140 @@
 /**
  * SCRIPT DE TEST EMAIL
  * Usage: node test-email.js
- * 
- * Ce script teste la configuration Gmail
  */
 
 const dotenv = require('dotenv');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
-// Charger les variables d'environnement
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-console.log('\n🔧 TEST DE CONFIGURATION EMAIL\n');
-console.log('═'.repeat(50));
+const logDivider = () => console.log('═'.repeat(50));
 
-// 1. Vérifier les variables
-console.log('\n📋 VARIABLES D\'ENVIRONNEMENT:\n');
+const verifySmtp = async () => {
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: parseInt(process.env.EMAIL_PORT, 10),
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
 
-const isResend = Boolean(process.env.RESEND_API_KEY);
+  await transporter.verify();
 
-const requiredVars = isResend ? ['RESEND_API_KEY', 'EMAIL_FROM'] : ['EMAIL_HOST','EMAIL_PORT','EMAIL_USER','EMAIL_PASSWORD','EMAIL_FROM'];
-
-let allSet = true;
-requiredVars.forEach(varName => {
-  const value = process.env[varName];
-  if (value) {
-    const masked = varName === 'EMAIL_PASSWORD' ? '●'.repeat(10) : value;
-    console.log(`✅ ${varName}: ${masked}`);
-  } else {
-    console.log(`❌ ${varName}: NON CONFIGURÉ`);
-    allSet = false;
-  }
-});
-
-if (!allSet) {
-  console.log('\n❌ ERREUR: Certaines variables ne sont pas configurées!');
-  console.log('Veuillez éditer backend/.env et remplir toutes les valeurs.');
-  process.exit(1);
-}
-
-if (isResend) {
-  console.log('\n\n?? TEST VIA RESEND API:\n');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  const payload = {
+  const testEmail = process.env.EMAIL_USER;
+  const info = await transporter.sendMail({
     from: process.env.EMAIL_FROM,
-    to: [process.env.EMAIL_FROM],
-    subject: '? Test Configuration Email - AfriRide',
+    to: testEmail,
+    subject: 'Test Configuration Email - AfriRide',
     html: `
       <div style="font-family: Arial; padding: 20px;">
-        <h2 style="color: #667eea;">? Configuration Email R�ussie (Resend)!</h2>
-        <p>Ce email a �t� envoy� avec succ�s via Resend.</p>
+        <h2 style="color: #667eea;">Configuration Email Reussie!</h2>
+        <p>Ce message confirme que le serveur AfriRide peut envoyer des emails.</p>
         <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>D�tails:</strong></p>
-          <p>Email From: ${process.env.EMAIL_FROM}</p>
-          <p>Timestamp: ${new Date().toLocaleString('fr-FR')}</p>
-          <p>Status: ? OK</p>
+          <p><strong>Email From:</strong> ${process.env.EMAIL_FROM}</p>
+          <p><strong>Timestamp:</strong> ${new Date().toLocaleString('fr-FR')}</p>
+          <p><strong>Status:</strong> OK</p>
         </div>
       </div>
     `
-  };
+  });
 
-  fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload),
-    signal: controller.signal
-  })
-    .then(async (res) => {
-      clearTimeout(timeout);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.log('? Erreur Resend:', data?.message || res.status);
-        process.exit(1);
-      }
-      console.log('? Email de test envoy� via Resend!');
-      console.log(`?? Message ID: ${data?.id || 'N/A'}`);
-      process.exit(0);
-    })
-    .catch((err) => {
-      clearTimeout(timeout);
-      console.log('? Erreur Resend:', err.message || err);
-      process.exit(1);
-    });
-  return;
-}
-// 2. Tester la connexion
-console.log('\n\n📧 TEST DE CONNEXION AU SERVEUR EMAIL:\n');
+  console.log('Email de test envoye avec succes.');
+  console.log(`Message ID: ${info.messageId}`);
+  console.log(`Destinataire: ${testEmail}`);
+};
 
-const nodemailer = require('nodemailer');
+const verifyResend = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
-
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('❌ Erreur de connexion:');
-    console.log(error.message);
-    console.log('\n🔍 SOLUTIONS:\n');
-    
-    if (error.message.includes('Invalid login')) {
-      console.log('1. Vérifiez votre EMAIL_USER et EMAIL_PASSWORD');
-      console.log('2. Assurez-vous d\'utiliser un MOT DE PASSE D\'APPLICATION');
-      console.log('3. La vérification en 2 étapes doit être ACTIVÉE');
-      console.log('4. Rendez-vous sur: https://myaccount.google.com/apppasswords');
-    } else if (error.message.includes('ENOTFOUND')) {
-      console.log('1. Vérifiez votre connexion internet');
-      console.log('2. Vérifiez que EMAIL_HOST est correct');
-      console.log('3. Testez: ping smtp.gmail.com');
-    }
-    process.exit(1);
-  } else {
-    console.log('✅ Connexion réussie au serveur SMTP!');
-    console.log('\n📤 TEST D\'ENVOI D\'EMAIL:\n');
-    
-    // 3. Envoyer un email de test
-    const testEmail = process.env.EMAIL_USER; // Envoyer à soi-même
-    
-    const mailOptions = {
+  try {
+    const payload = {
       from: process.env.EMAIL_FROM,
-      to: testEmail,
-      subject: '✅ Test Configuration Email - AfriRide',
+      to: [process.env.EMAIL_FROM],
+      subject: 'Test Configuration Email - AfriRide',
       html: `
         <div style="font-family: Arial; padding: 20px;">
-          <h2 style="color: #667eea;">✅ Configuration Email Réussie!</h2>
-          <p>Ce email a été envoyé avec succès depuis votre serveur AfriRide.</p>
+          <h2 style="color: #667eea;">Configuration Email Reussie (Resend)!</h2>
+          <p>Ce message confirme que le serveur AfriRide peut envoyer des emails via Resend.</p>
           <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Détails:</strong></p>
-            <p>Email From: ${process.env.EMAIL_FROM}</p>
-            <p>Timestamp: ${new Date().toLocaleString('fr-FR')}</p>
-            <p>Status: ✅ OK</p>
+            <p><strong>Email From:</strong> ${process.env.EMAIL_FROM}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toLocaleString('fr-FR')}</p>
+            <p><strong>Status:</strong> OK</p>
           </div>
-          <p style="color: #666; font-size: 12px;">Vous pouvez maintenant utiliser le système de notifications d'AfriRide.</p>
         </div>
       `
     };
-    
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log('❌ Erreur lors de l\'envoi:');
-        console.log(error.message);
-        process.exit(1);
-      } else {
-        console.log('✅ Email de test envoyé avec succès!');
-        console.log(`📨 Message ID: ${info.messageId}`);
-        console.log(`📧 Destinataire: ${testEmail}`);
-        console.log('\n🎉 Configuration Email est COMPLÈTE ET OPÉRATIONNELLE!\n');
-        console.log('═'.repeat(50));
-        console.log('\nVotre système de notifications est prêt.');
-        console.log('Les emails seront envoyés automatiquement pour:\n');
-        console.log('  ✉️  Inscription des utilisateurs');
-        console.log('  ✉️  Confirmation de réservation');
-        console.log('  ✉️  Rappel de paiement');
-        console.log('  ✉️  Contrat avec PDF');
-        console.log('  ✉️  Notification de signature');
-        console.log('\n═'.repeat(50) + '\n');
-        process.exit(0);
-      }
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.message || `HTTP ${res.status}`);
+    }
+
+    console.log('Email de test envoye via Resend.');
+    console.log(`Message ID: ${data?.id || 'N/A'}`);
+  } finally {
+    clearTimeout(timeout);
   }
-});
+};
 
+const main = async () => {
+  console.log('\nTEST DE CONFIGURATION EMAIL\n');
+  logDivider();
+  console.log('\nVARIABLES D\'ENVIRONNEMENT:\n');
 
+  const isResend = Boolean(process.env.RESEND_API_KEY);
+  const requiredVars = isResend
+    ? ['RESEND_API_KEY', 'EMAIL_FROM']
+    : ['EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASSWORD', 'EMAIL_FROM'];
+
+  let allSet = true;
+  for (const varName of requiredVars) {
+    const value = process.env[varName];
+    if (value) {
+      const masked = varName === 'EMAIL_PASSWORD' ? '**********' : value;
+      console.log(`OK ${varName}: ${masked}`);
+    } else {
+      console.log(`KO ${varName}: NON CONFIGURE`);
+      allSet = false;
+    }
+  }
+
+  if (!allSet) {
+    throw new Error('Certaines variables email ne sont pas configurees dans backend/.env');
+  }
+
+  console.log(`\nMode detecte: ${isResend ? 'Resend API' : 'SMTP / Nodemailer'}\n`);
+
+  if (isResend) {
+    await verifyResend();
+  } else {
+    await verifySmtp();
+  }
+
+  console.log('\nConfiguration email operationnelle.');
+  logDivider();
+};
+
+main()
+  .then(() => {
+    process.exitCode = 0;
+  })
+  .catch((error) => {
+    console.error('\nErreur test email:');
+    console.error(error.message || error);
+    process.exitCode = 1;
+  });

@@ -5,7 +5,7 @@ import { vehicleService } from '../../services/vehicleService';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import { PageSkeleton } from '../../components/UI';
-import { API_BASE_URL } from '../../services/api';
+import { resolveMediaUrl } from '../../utils/media';
 
 function EditVehicle() {
   const { id } = useParams();
@@ -218,7 +218,7 @@ function EditVehicle() {
                 {existingImages.map((image, index) => (
                   <div key={index} className="relative">
                     <img
-                      src={`${API_BASE_URL}${image}`}
+                      src={resolveMediaUrl(image)}
                       alt={`Image ${index + 1}`}
                       loading="lazy"
                       decoding="async"
