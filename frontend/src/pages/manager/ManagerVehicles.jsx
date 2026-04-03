@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Car, Plus, Edit, Trash2, Eye, Search, Filter, Fuel, Calendar, Wrench, RotateCcw } from 'lucide-react';
+import { Car, Plus, Edit, Trash2, Eye, Search, Filter, Fuel, Calendar, Wrench, RotateCcw, ShieldAlert } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { vehicleService } from '../../services/vehicleService';
 import { AuthContext } from '../../context/AuthContext';
@@ -134,6 +134,7 @@ function ManagerVehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [agencyKycStatus, setAgencyKycStatus] = useState(null);
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     vehicleId: null,
@@ -153,8 +154,13 @@ function ManagerVehicles() {
   const loadVehicles = async () => {
     try {
       setLoading(true);
-      const response = await managerService.getAgencyVehicles();
-      setVehicles(response.data);
+      const [vehiclesResponse, kycResponse] = await Promise.all([
+        managerService.getAgencyVehicles(),
+        managerService.getAgencyKycStatus().catch(() => null)
+      ]);
+
+      setVehicles(vehiclesResponse.data);
+      setAgencyKycStatus(kycResponse?.data?.verificationStatus || null);
     } catch (error) {
       console.error('Erreur chargement vehicules:', error);
     } finally {
@@ -232,6 +238,26 @@ function ManagerVehicles() {
             <span>Ajouter un vehicule</span>
           </Link>
         </div>
+
+        {agencyKycStatus && agencyKycStatus !== 'verified' && (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-bold">Les vehicules de cette agence ne sont pas encore publics</p>
+                <p className="text-sm">
+                  Le compte manager peut etre verifie, mais tant que le KYC de l agence reste en statut <span className="font-semibold">{agencyKycStatus}</span>, les vehicules restent en brouillon.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/manager/agency-kyc"
+              className="inline-flex items-center justify-center rounded-xl bg-amber-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-950"
+            >
+              Ouvrir le KYC agence
+            </Link>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">

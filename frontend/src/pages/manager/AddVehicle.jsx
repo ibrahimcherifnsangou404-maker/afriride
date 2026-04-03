@@ -5,6 +5,63 @@ import { vehicleService } from '../../services/vehicleService';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 
+const MAX_IMAGE_DIMENSION = 1600;
+const OUTPUT_IMAGE_QUALITY = 0.82;
+
+const fileToDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onloadend = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error('Impossible de lire l image'));
+  reader.readAsDataURL(file);
+});
+
+const loadImageElement = (src) => new Promise((resolve, reject) => {
+  const img = new Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => reject(new Error('Impossible de charger l image'));
+  img.src = src;
+});
+
+const optimizeImageFile = async (file) => {
+  if (!file?.type?.startsWith('image/') || ['image/heic', 'image/heif'].includes(file.type)) {
+    return file;
+  }
+
+  const sourceUrl = await fileToDataUrl(file);
+  const image = await loadImageElement(sourceUrl);
+  const largestSide = Math.max(image.width, image.height);
+
+  if (largestSide <= MAX_IMAGE_DIMENSION && file.size <= 1.5 * 1024 * 1024) {
+    return file;
+  }
+
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / largestSide);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return file;
+  }
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/webp', OUTPUT_IMAGE_QUALITY);
+  });
+
+  if (!blob || blob.size >= file.size) {
+    return file;
+  }
+
+  const optimizedName = file.name.replace(/\.[^.]+$/, '') + '.webp';
+  return new File([blob], optimizedName, {
+    type: 'image/webp',
+    lastModified: Date.now()
+  });
+};
+
 function AddVehicle() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useContext(AuthContext);
@@ -59,22 +116,31 @@ function AddVehicle() {
   };
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
+    const processImages = async () => {
+      const files = Array.from(e.target.files || []);
 
-    if (images.length + files.length > 5) {
-      setError('Vous pouvez ajouter maximum 5 images');
-      return;
-    }
+      if (images.length + files.length > 5) {
+        setError('Vous pouvez ajouter maximum 5 images');
+        return;
+      }
 
-    setImages((prev) => [...prev, ...files]);
+      try {
+        setLoading(true);
+        const optimizedFiles = await Promise.all(files.map((file) => optimizeImageFile(file)));
+        const previewUrls = await Promise.all(optimizedFiles.map((file) => fileToDataUrl(file)));
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreviews((prev) => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+        setImages((prev) => [...prev, ...optimizedFiles]);
+        setImagePreviews((prev) => [...prev, ...previewUrls]);
+      } catch (processingError) {
+        console.error('Erreur preparation images:', processingError);
+        setError('Impossible de preparer les images avant envoi');
+      } finally {
+        setLoading(false);
+        e.target.value = '';
+      }
+    };
+
+    processImages();
   };
 
   const removeImage = (index) => {
@@ -196,7 +262,7 @@ function AddVehicle() {
                   Choisir des images
                 </label>
                 <p className="text-sm text-gray-500 mt-2">
-                  WEBP recommande, PNG ou JPG acceptes (Max 5MB par image)
+                  Les images sont optimisees automatiquement avant envoi pour accelerer la publication
                 </p>
               </div>
 
@@ -413,7 +479,7 @@ function AddVehicle() {
                 disabled={loading}
                 className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-green-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Ajout en cours...' : 'Ajouter le vehicule'}
+                {loading ? 'Preparation / ajout en cours...' : 'Ajouter le vehicule'}
               </button>
               <Link
                 to="/manager/vehicles"
