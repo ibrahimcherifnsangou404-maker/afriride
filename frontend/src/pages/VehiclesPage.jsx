@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useContext } from 'react';
+import { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Filter, Car, Calendar } from 'lucide-react';
 import { vehicleService } from '../services/vehicleService';
@@ -11,6 +11,7 @@ import VehicleCardSkeleton from '../components/VehicleCardSkeleton';
 
 function VehiclesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const hasHydratedSearch = useRef(false);
   const [vehicles, setVehicles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [agencies, setAgencies] = useState([]);
@@ -42,19 +43,6 @@ function VehiclesPage() {
     endDate: searchParams.get('endDate') || ''
   });
 
-  useEffect(() => {
-    loadData();
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    const term = filters.search.trim();
-    if (term.length > 0 && term.length < 2) return;
-    const timer = setTimeout(() => {
-      applyFilters(1);
-    }, 320);
-    return () => clearTimeout(timer);
-  }, [filters.search]);
-
   const syncUrlState = (nextFilters, nextPage = pagination.page, nextSort = sortBy) => {
     const params = new URLSearchParams();
 
@@ -72,6 +60,18 @@ function VehiclesPage() {
     setSearchParams(params, { replace: true });
   };
 
+  const updateVehicleResults = (vehiclesData, targetPage) => {
+    setVehicles(vehiclesData.data || []);
+    setPagination(vehiclesData.pagination || {
+      page: targetPage,
+      limit: pagination.limit,
+      totalItems: vehiclesData.total || (vehiclesData.data || []).length,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPrevPage: targetPage > 1
+    });
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -83,18 +83,9 @@ function VehiclesPage() {
         vehicleService.getAgencies(),
         favoritesPromise
       ]);
-
-      setVehicles(vehiclesData.data || []);
+      updateVehicleResults(vehiclesData, pagination.page);
       setCategories(categoriesData.data || []);
       setAgencies(agenciesData.data || []);
-      setPagination(vehiclesData.pagination || {
-        page: 1,
-        limit: pagination.limit,
-        totalItems: vehiclesData.total || (vehiclesData.data || []).length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: false
-      });
       const ids = (favoritesData?.data || []).map((f) => f.vehicleId);
       setFavoriteIds(new Set(ids));
     } catch (error) {
@@ -105,6 +96,26 @@ function VehiclesPage() {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!hasHydratedSearch.current) {
+      hasHydratedSearch.current = true;
+      return;
+    }
+
+    const term = filters.search.trim();
+    if (term.length > 0 && term.length < 2) return;
+
+    const timer = setTimeout(() => {
+      applyFilters(1, filters);
+    }, 320);
+
+    return () => clearTimeout(timer);
+  }, [filters.search]);
+
   const handleFilterChange = (e) => {
     setFilters((prev) => ({
       ...prev,
@@ -112,25 +123,17 @@ function VehiclesPage() {
     }));
   };
 
-  const applyFilters = async (targetPage = 1) => {
+  const applyFilters = async (targetPage = 1, nextFilters = filters) => {
     try {
       setIsRefreshing(true);
       setError('');
       const vehiclesData = await vehicleService.getVehicles({
-        ...filters,
+        ...nextFilters,
         page: targetPage,
         limit: pagination.limit
       });
-      setVehicles(vehiclesData.data || []);
-      setPagination(vehiclesData.pagination || {
-        page: targetPage,
-        limit: pagination.limit,
-        totalItems: vehiclesData.total || (vehiclesData.data || []).length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: targetPage > 1
-      });
-      syncUrlState(filters, targetPage, sortBy);
+      updateVehicleResults(vehiclesData, targetPage);
+      syncUrlState(nextFilters, targetPage, sortBy);
     } catch (error) {
       console.error('Erreur filtrage:', error);
       setError(error.response?.data?.message || 'Impossible de mettre a jour les resultats.');
@@ -155,38 +158,13 @@ function VehiclesPage() {
     setError('');
     syncUrlState(nextFilters, 1, 'newest');
     setSortBy('newest');
-    setPagination((prev) => ({ ...prev, page: 1 }));
-
-    try {
-      setIsRefreshing(true);
-      const vehiclesData = await vehicleService.getVehicles({
-        ...nextFilters,
-        page: 1,
-        limit: pagination.limit
-      });
-      setVehicles(vehiclesData.data || []);
-      setPagination(vehiclesData.pagination || {
-        page: 1,
-        limit: pagination.limit,
-        totalItems: vehiclesData.total || (vehiclesData.data || []).length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: false
-      });
-    } catch (error) {
-      console.error('Erreur reinitialisation filtres:', error);
-      setError(error.response?.data?.message || 'Impossible de reinitialiser les resultats.');
-    } finally {
-      setIsRefreshing(false);
-    }
+    await applyFilters(1, nextFilters);
   };
 
   const removeFilter = (key) => {
-    setFilters((prev) => {
-      const nextFilters = { ...prev, [key]: '' };
-      syncUrlState(nextFilters, 1, sortBy);
-      return nextFilters;
-    });
+    const nextFilters = { ...filters, [key]: '' };
+    setFilters(nextFilters);
+    applyFilters(1, nextFilters);
   };
 
   const getActiveFilterChips = () => {
@@ -233,7 +211,6 @@ function VehiclesPage() {
 
   const handlePageChange = (nextPage) => {
     if (nextPage < 1 || nextPage > pagination.totalPages || nextPage === pagination.page) return;
-    setPagination((prev) => ({ ...prev, page: nextPage }));
     applyFilters(nextPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
