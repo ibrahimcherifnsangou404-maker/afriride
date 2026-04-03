@@ -5,11 +5,22 @@ const { User, Conversation, Message } = require('./models');
 const { setSocketServer } = require('./services/socketService');
 const { markOnline, markOffline, isUserOnline } = require('./services/presenceService');
 
+// Origines autorisées (mêmes que le CORS HTTP de server.js)
+const ALLOWED_ORIGINS = [
+  'https://afriride-frontend.onrender.com',
+  'http://localhost:5173',
+  ...(process.env.FRONTEND_URLS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+];
+
 const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
+      origin: ALLOWED_ORIGINS,
+      methods: ['GET', 'POST'],
+      credentials: true
     }
   });
 

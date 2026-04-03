@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+﻿const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { User } = require('../models');
@@ -120,10 +120,10 @@ const register = async (req, res) => {
     }
 
     // Vérifier la longueur du mot de passe
-    if (password.length < 6) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Le mot de passe doit contenir au moins 6 caractères'
+        message: 'Le mot de passe doit contenir au moins 8 caractères'
       });
     }
 
@@ -184,7 +184,6 @@ const register = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de l\'inscription',
-      error: error.message
     });
   }
 };
@@ -250,7 +249,6 @@ const confirmEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la confirmation de l\'email',
-      error: error.message
     });
   }
 };
@@ -338,7 +336,6 @@ const verifyEmailCode = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Erreur lors de la vérification du code email',
-      error: error.message
     });
   }
 };
@@ -402,7 +399,6 @@ const resendEmailCode = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Erreur lors du renvoi du code',
-      error: error.message
     });
   }
 };
@@ -472,7 +468,6 @@ const login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la connexion',
-      error: error.message
     });
   }
 };
@@ -557,7 +552,6 @@ const googleLogin = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Erreur lors de la connexion Google',
-      error: error.message
     });
   }
 };
@@ -580,7 +574,6 @@ const getMe = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la récupération du profil',
-      error: error.message
     });
   }
 };
@@ -633,7 +626,6 @@ const updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la mise à jour du profil',
-      error: error.message
     });
   }
 };
@@ -659,10 +651,10 @@ const updatePassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Le nouveau mot de passe doit contenir au moins 6 caractères'
+        message: 'Le nouveau mot de passe doit contenir au moins 8 caractères'
       });
     }
 
@@ -691,7 +683,6 @@ const updatePassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la mise à jour du mot de passe',
-      error: error.message
     });
   }
 };
@@ -770,7 +761,6 @@ const forgotPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la demande de réinitialisation',
-      error: error.message
     });
   }
 };
@@ -798,10 +788,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Le mot de passe doit contenir au moins 6 caractères'
+        message: 'Le mot de passe doit contenir au moins 8 caractères'
       });
     }
 
@@ -849,7 +839,6 @@ const resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la réinitialisation du mot de passe',
-      error: error.message
     });
   }
 };

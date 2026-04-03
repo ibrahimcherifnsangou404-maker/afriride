@@ -1,9 +1,12 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const http = require('http');
 const path = require('path');
 const multer = require('multer');
+
 // Charger les variables d'environnement (seulement en local)
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: path.join(__dirname, '.env') });
@@ -24,7 +27,12 @@ const allowedOrigins = [
     .filter(Boolean)
 ];
 
-// Middleware
+// ─── Sécurité HTTP Headers (Helmet) ──────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' } // Autorise les images depuis le frontend
+}));
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -34,10 +42,12 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Log des requêtes uniquement en développement (réduit le bruit et la latence en production)
+// ─── Limites body JSON (protection DoS) ──────────────────────────────────────
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// ─── Log des requêtes en développement uniquement ─────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
     console.log(`🔥 ${req.method} ${req.originalUrl}`);
@@ -45,10 +55,16 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Static files pour les uploads
-app.use('/uploads', express.static('uploads'));
+// ─── Static files pour les uploads ───────────────────────────────────────────
+// Véhicules et agences : publics
+app.use('/uploads/vehicles', express.static(path.join(__dirname, 'uploads/vehicles')));
+app.use('/uploads/agencies', express.static(path.join(__dirname, 'uploads/agencies')));
 
-// Routes
+// Documents KYC : protégés par authentification obligatoire
+const { protect } = require('./middleware/auth');
+app.use('/uploads/documents', protect, express.static(path.join(__dirname, 'uploads/documents')));
+
+// ─── Routes ──────────────────────────────────────────────────────────────────
 const authRoutes = require('./routes/authRoutes');
 const agencyRoutes = require('./routes/agencyRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
@@ -65,7 +81,6 @@ const adminRoutes = require('./routes/adminRoutes');
 const managerRoutes = require('./routes/managerRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 
-// Enregistrer les routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
@@ -82,10 +97,14 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Route de base
+// ─── Route de base ────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
+  // En production : ne pas exposer la liste des endpoints
+  if (process.env.NODE_ENV === 'production') {
+    return res.json({ status: 'ok', service: 'AfriRide API' });
+  }
   res.json({
-    message: 'API AfriRide - Serveur actif',
+    message: 'API AfriRide - Serveur actif [DEV]',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
@@ -106,17 +125,15 @@ app.get('/', (req, res) => {
   });
 });
 
-// Gestion des erreurs 404
+// ─── Gestion des erreurs 404 ──────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({
-    error: 'Route non trouvée',
-    path: req.path
-  });
+  res.status(404).json({ success: false, message: 'Route non trouvée' });
 });
 
-// Gestion globale des erreurs
+// ─── Gestion globale des erreurs ──────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('Erreur serveur:', err);
+  // Log serveur uniquement (jamais envoyé au client en prod)
+  console.error('Erreur serveur:', err.message);
 
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -127,36 +144,33 @@ app.use((err, req, res, next) => {
     }
     return res.status(400).json({
       success: false,
-      message: 'Erreur upload: ' + err.message
+      message: 'Erreur lors de l upload du fichier'
     });
   }
 
   if (err && err.message && err.message.toLowerCase().includes('type de fichier')) {
-    return res.status(400).json({
-      success: false,
-      message: err.message
-    });
+    return res.status(400).json({ success: false, message: err.message });
   }
 
-  res.status(500).json({
-    error: 'Erreur serveur interne',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  if (err && err.message && err.message.includes('CORS')) {
+    return res.status(403).json({ success: false, message: 'Origine non autorisee' });
+  }
+
+  const isDev = process.env.NODE_ENV !== 'production';
+  res.status(err.status || 500).json({
+    success: false,
+    message: isDev ? err.message : 'Erreur interne du serveur'
   });
 });
 
-// Démarrer le serveur
+// ─── Démarrer le serveur ──────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
     console.log('🔄 Démarrage du serveur AfriRide...');
-
-    // Synchroniser la base de données
     await syncDatabase();
-
-    // Lancer le serveur
     initSocket(server);
-
     server.listen(PORT, () => {
       console.log('✅ Serveur démarré sur le port', PORT);
       console.log(`📡 API disponible sur: http://localhost:${PORT}`);

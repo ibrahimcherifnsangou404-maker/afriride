@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+﻿const crypto = require('crypto');
 const { User, Agency, Category, Vehicle, Booking, MessageReport, Message, Conversation } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
@@ -250,13 +250,13 @@ const getDashboard = async (req, res) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    console.log('=== STATS ADMIN ===');
-    console.log('Agences:', totalAgencies);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('=== STATS ADMIN ===', { totalAgencies, totalVehicles, totalBookings, totalUsers, totalRevenue });
     console.log('Véhicules:', totalVehicles);
     console.log('Réservations:', totalBookings);
-    console.log('Clients:', totalUsers);
-    console.log('Revenus:', totalRevenue);
-    console.log('==================');
+
+
+    }
 
     res.status(200).json({
       success: true,
