@@ -387,7 +387,28 @@ const updateAgency = async (req, res) => {
       });
     }
 
+    const previousVerificationStatus = agency.verificationStatus;
     await agency.update(req.body);
+
+    // Si le verificationStatus a changé, mettre à jour la disponibilité des véhicules
+    const newVerificationStatus = req.body.verificationStatus;
+    if (newVerificationStatus && newVerificationStatus !== previousVerificationStatus) {
+      if (newVerificationStatus === 'verified') {
+        // L'agence vient d'être vérifiée → publier tous ses véhicules
+        await Vehicle.update(
+          { isAvailable: true },
+          { where: { agencyId: agency.id } }
+        );
+        console.log(`[updateAgency] Agence ${agency.id} vérifiée → véhicules publiés`);
+      } else {
+        // L'agence est rejetée ou dé-vérifiée → dépublier tous ses véhicules
+        await Vehicle.update(
+          { isAvailable: false },
+          { where: { agencyId: agency.id } }
+        );
+        console.log(`[updateAgency] Agence ${agency.id} statut=${newVerificationStatus} → véhicules dépubliés`);
+      }
+    }
 
     res.status(200).json({
       success: true,
