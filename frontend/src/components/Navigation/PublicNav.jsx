@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Car, Menu, X, LogIn, UserPlus, Building2 } from 'lucide-react';
+import { vehicleService } from '../../services/vehicleService';
 
 export default function PublicNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -67,6 +68,8 @@ export default function PublicNav() {
             </Link>
             <Link
               to="/vehicles"
+              onMouseEnter={() => vehicleService.prefetchCatalogue()}
+              onFocus={() => vehicleService.prefetchCatalogue()}
               className={`px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                 isActive('/vehicles') ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
               }`}
@@ -95,6 +98,8 @@ export default function PublicNav() {
 
             <Link
               to="/vehicles"
+              onMouseEnter={() => vehicleService.prefetchCatalogue()}
+              onFocus={() => vehicleService.prefetchCatalogue()}
               className="hidden md:flex items-center space-x-1 px-4 py-2 bg-primary hover:bg-primary-700 text-white rounded-lg font-medium transition-all shadow-sm hover:shadow-md"
             >
               <span>Reserver</span>
@@ -124,6 +129,8 @@ export default function PublicNav() {
           <div id="public-mobile-menu" className="md:hidden border-t border-slate-200 py-4 space-y-2">
             <Link
               to="/vehicles"
+              onMouseEnter={() => vehicleService.prefetchCatalogue()}
+              onFocus={() => vehicleService.prefetchCatalogue()}
               className="block mx-4 mb-3 px-4 py-2.5 bg-primary text-white rounded-lg font-semibold text-center"
               onClick={() => setMobileOpen(false)}
             >
@@ -138,6 +145,8 @@ export default function PublicNav() {
             </Link>
             <Link
               to="/vehicles"
+              onMouseEnter={() => vehicleService.prefetchCatalogue()}
+              onFocus={() => vehicleService.prefetchCatalogue()}
               className="block px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary hover:bg-slate-100 rounded-lg transition-all"
               onClick={() => setMobileOpen(false)}
             >

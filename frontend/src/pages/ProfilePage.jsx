@@ -6,12 +6,13 @@ import {
     Calendar, Shield, Award, Edit2, CheckCircle
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
-import { authService } from '../services/api';
+import { userService } from '../services/userService';
 import { Footer } from '../components/Layout/Footer';
 import { Card, Button, Input, Badge, Loading } from '../components/UI';
 
 function ProfilePage() {
-    const { user } = useContext(AuthContext);
+    const { user, updateUser } = useContext(AuthContext);
+    const { addToast } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
@@ -52,17 +53,13 @@ function ProfilePage() {
         setSuccessMsg('');
 
         try {
-            const response = await authService.updateProfile(formData);
+            const response = await userService.updateProfile(formData);
             if (response.success) {
-                // Mettre à jour le contexte via une pseudo-connexion ou une méthode update locale si elle existait
-                // Ici on suppose que login met à jour le storage et le state
                 const updatedUser = { ...user, ...formData };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-                // Idéalement authContext devrait avoir une méthode updateUser, on force le reload pour l'instant ou on attend une meilleure implémentation
-                window.location.reload();
-
+                updateUser(updatedUser);
                 setSuccessMsg('Profil mis à jour avec succès !');
                 setIsEditing(false);
+                addToast('Profil mis a jour avec succes', 'success');
             }
         } catch (error) {
             console.error('Erreur mise à jour:', error);

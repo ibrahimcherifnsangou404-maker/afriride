@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
+import { vehicleService } from '../../services/vehicleService';
 
 export default function UserNav() {
   const { user, logout } = useContext(AuthContext);
@@ -107,6 +108,8 @@ export default function UserNav() {
                 <Link
                   key={item.path}
                   to={item.path}
+                  onMouseEnter={item.path === '/vehicles' ? () => vehicleService.prefetchCatalogue() : undefined}
+                  onFocus={item.path === '/vehicles' ? () => vehicleService.prefetchCatalogue() : undefined}
                   className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center space-x-1 ${
                     isActive(item.path) ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
                   }`}
@@ -147,7 +150,12 @@ export default function UserNav() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Link to="/vehicles" className="hidden md:inline-flex">
+              <Link
+                to="/vehicles"
+                className="hidden md:inline-flex"
+                onMouseEnter={() => vehicleService.prefetchCatalogue()}
+                onFocus={() => vehicleService.prefetchCatalogue()}
+              >
                 <button className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-700 text-white text-sm font-semibold transition-all shadow-sm">
                   Reserver
                 </button>
@@ -227,6 +235,8 @@ export default function UserNav() {
             <div className="px-4 py-3 space-y-2">
               <Link
                 to="/vehicles"
+                onMouseEnter={() => vehicleService.prefetchCatalogue()}
+                onFocus={() => vehicleService.prefetchCatalogue()}
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center justify-center px-4 py-2.5 rounded-lg bg-primary text-white font-semibold"
               >

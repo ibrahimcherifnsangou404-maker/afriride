@@ -1,24 +1,27 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Filter, Car, Calendar } from 'lucide-react';
 import { vehicleService } from '../services/vehicleService';
 import { Footer } from '../components/Layout/Footer';
 import { favoriteService } from '../services/favoriteService';
 import { AuthContext } from '../context/AuthContext';
-import { Card, Button, EmptyState, Skeleton } from '../components/UI';
+import { Alert, Card, Button, EmptyState, Skeleton } from '../components/UI';
 import VehicleCard from '../components/VehicleCard';
 import VehicleCardSkeleton from '../components/VehicleCardSkeleton';
 
 function VehiclesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [vehicles, setVehicles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [pagination, setPagination] = useState({
-    page: 1,
+    page: Number(searchParams.get('page') || 1),
     limit: 12,
     totalItems: 0,
     totalPages: 1,
@@ -28,15 +31,15 @@ function VehiclesPage() {
   const { isAuthenticated } = useContext(AuthContext);
 
   const [filters, setFilters] = useState({
-    search: '',
-    category: '',
-    agency: '',
-    transmission: '',
-    fuelType: '',
-    minPrice: '',
-    maxPrice: '',
-    startDate: '',
-    endDate: ''
+    search: searchParams.get('search') || '',
+    category: searchParams.get('category') || '',
+    agency: searchParams.get('agency') || '',
+    transmission: searchParams.get('transmission') || '',
+    fuelType: searchParams.get('fuelType') || '',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    startDate: searchParams.get('startDate') || '',
+    endDate: searchParams.get('endDate') || ''
   });
 
   useEffect(() => {
@@ -52,12 +55,26 @@ function VehiclesPage() {
     return () => clearTimeout(timer);
   }, [filters.search]);
 
+  const syncUrlState = (nextFilters, nextPage = pagination.page, nextSort = sortBy) => {
+    const params = new URLSearchParams();
+
+    Object.entries(nextFilters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+
+    if (nextPage > 1) params.set('page', String(nextPage));
+    if (nextSort && nextSort !== 'newest') params.set('sort', nextSort);
+
+    setSearchParams(params, { replace: true });
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
+      setError('');
       const favoritesPromise = isAuthenticated ? favoriteService.getMyFavorites() : Promise.resolve({ data: [] });
       const [vehiclesData, categoriesData, agenciesData, favoritesData] = await Promise.all([
-        vehicleService.getVehicles({ page: 1, limit: pagination.limit }),
+        vehicleService.getVehicles({ ...filters, page: pagination.page, limit: pagination.limit }),
         vehicleService.getCategories(),
         vehicleService.getAgencies(),
         favoritesPromise
@@ -78,6 +95,7 @@ function VehiclesPage() {
       setFavoriteIds(new Set(ids));
     } catch (error) {
       console.error('Erreur chargement donnees:', error);
+      setError(error.response?.data?.message || 'Impossible de charger le catalogue pour le moment.');
     } finally {
       setLoading(false);
     }
@@ -93,6 +111,7 @@ function VehiclesPage() {
   const applyFilters = async (targetPage = 1) => {
     try {
       setIsRefreshing(true);
+      setError('');
       const vehiclesData = await vehicleService.getVehicles({
         ...filters,
         page: targetPage,
@@ -107,15 +126,17 @@ function VehiclesPage() {
         hasNextPage: false,
         hasPrevPage: targetPage > 1
       });
+      syncUrlState(filters, targetPage, sortBy);
     } catch (error) {
       console.error('Erreur filtrage:', error);
+      setError(error.response?.data?.message || 'Impossible de mettre a jour les resultats.');
     } finally {
       setIsRefreshing(false);
     }
   };
 
   const resetFilters = async () => {
-    setFilters({
+    const nextFilters = {
       search: '',
       category: '',
       agency: '',
@@ -125,7 +146,12 @@ function VehiclesPage() {
       maxPrice: '',
       startDate: '',
       endDate: ''
-    });
+    };
+    setFilters(nextFilters);
+    setError('');
+    syncUrlState(nextFilters, 1, 'newest');
+    setSortBy('newest');
+    setPagination((prev) => ({ ...prev, page: 1 }));
     loadData();
   };
 
@@ -177,9 +203,18 @@ function VehiclesPage() {
 
   const handlePageChange = (nextPage) => {
     if (nextPage < 1 || nextPage > pagination.totalPages || nextPage === pagination.page) return;
+    setPagination((prev) => ({ ...prev, page: nextPage }));
     applyFilters(nextPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    syncUrlState(filters, pagination.page, sortBy);
+  }, [filters, pagination.page, sortBy]);
+
+  useEffect(() => {
+    vehicleService.prefetchCatalogue({ page: pagination.page, limit: pagination.limit });
+  }, [pagination.page, pagination.limit]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
@@ -347,6 +382,17 @@ function VehiclesPage() {
                 ))}
               </div>
             </div>
+          ) : error && vehicles.length === 0 ? (
+            <div className="space-y-6">
+              <Alert
+                type="error"
+                title="Chargement impossible"
+                message={error}
+              />
+              <div className="flex justify-center">
+                <Button onClick={loadData}>Reessayer</Button>
+              </div>
+            </div>
           ) : vehicles.length === 0 ? (
             <EmptyState
               icon={Car}
@@ -357,6 +403,11 @@ function VehiclesPage() {
           ) : (
             <>
               <div className="mb-8">
+                {error && (
+                  <div className="mb-5">
+                    <Alert type="warning" title="Resultats partiellement indisponibles" message={error} />
+                  </div>
+                )}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div>
                     <p className="text-slate-900 text-lg font-semibold tracking-tight">{pagination.totalItems} vehicule(s) disponible(s)</p>
@@ -373,7 +424,11 @@ function VehiclesPage() {
                     <select
                       id="sort"
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
+                      onChange={(e) => {
+                        const nextSort = e.target.value;
+                        setSortBy(nextSort);
+                        syncUrlState(filters, pagination.page, nextSort);
+                      }}
                       className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900"
                     >
                       <option value="newest">Plus recents</option>

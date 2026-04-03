@@ -8,6 +8,7 @@ import Navigation from './components/Navigation';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import PageLoader from './components/PageLoader';
 import PageTransition from './components/PageTransition';
+import ScrollRestoration from './components/ScrollRestoration';
 import { loadCookieConsentFromServer } from './services/cookieConsentService';
 
 // ── Public Pages (lazy loaded) ──────────────────────────────────────────────
@@ -68,13 +69,6 @@ function AppRoutes() {
   useEffect(() => {
     setNavigateRef(navigate);
   }, [navigate]);
-
-  // Ameliore la fluidite de navigation: nouvelle page demarre en haut.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (location.hash) return;
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [location.pathname, location.search, location.hash]);
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -247,6 +241,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
+          <ScrollRestoration />
           <Navigation />
           <div className="min-h-screen bg-slate-50">
             <AppRoutes />

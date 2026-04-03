@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+      setLoading(true);
       const profileResponse = await authService.getProfile();
       const profile = profileResponse?.data;
       if (profile) {
@@ -131,6 +132,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
+  const updateUser = (nextUser) => {
+    if (!nextUser) {
+      localStorage.removeItem('user');
+      setUser(null);
+      return;
+    }
+
+    localStorage.setItem('user', JSON.stringify(nextUser));
+    setUser(nextUser);
+  };
+
   const setToken = (token, userData = null) => {
     localStorage.setItem('token', token);
     setAuthToken(token);
@@ -150,13 +162,14 @@ export const AuthProvider = ({ children }) => {
     resendEmailCode,
     logout,
     setToken,
+    updateUser,
     refreshUser,
     isAuthenticated: !!authToken
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

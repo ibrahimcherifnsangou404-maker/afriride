@@ -35,7 +35,6 @@ function MyBookingsPage() {
       return;
     }
     loadBookings();
-    window.scrollTo(0, 0);
   }, [isAuthenticated, navigate]);
 
   const loadBookings = async () => {

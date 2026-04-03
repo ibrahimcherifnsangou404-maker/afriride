@@ -15,10 +15,10 @@ import PublicNav from './PublicNav';
  * - Aucun écran sans point d'accès au reste de l'application
  */
 export default function Navigation() {
-  const { user, isAuthenticated } = useContext(AuthContext);
+  const { user, isAuthenticated, loading } = useContext(AuthContext);
 
   // Navigation publique si non connecté
-  if (!isAuthenticated) {
+  if (!isAuthenticated || (loading && !user)) {
     return <PublicNav />;
   }
 

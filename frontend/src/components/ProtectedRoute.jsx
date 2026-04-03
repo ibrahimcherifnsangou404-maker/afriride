@@ -6,7 +6,7 @@ import { PageSkeleton } from './UI';
 function ProtectedRoute({ children, allowedRoles }) {
   const { isAuthenticated, user, loading } = useContext(AuthContext);
 
-  if (loading) {
+  if (loading && isAuthenticated && !user) {
     return <PageSkeleton />;
   }
 

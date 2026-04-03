@@ -11,7 +11,7 @@ import { reviewService } from '../services/reviewService';
 import { promoCodeService } from '../services/promoCodeService';
 import { favoriteService } from '../services/favoriteService'; // IMPORT
 import { AuthContext } from '../context/AuthContext';
-import { Badge, Button, Card, Loading, EmptyState, Skeleton } from '../components/UI';
+import { Alert, Badge, Button, Card, Loading, EmptyState, Skeleton } from '../components/UI';
 import { resolveMediaUrl } from '../utils/media';
 
 
@@ -22,6 +22,7 @@ function VehicleDetailPage() {
 
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [reviews, setReviews] = useState([]);
   const [avgRating, setAvgRating] = useState(0);
@@ -160,6 +161,7 @@ function VehicleDetailPage() {
   const loadVehicle = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const response = await vehicleService.getVehicleById(id);
       setVehicle(response.data);
 
@@ -172,13 +174,13 @@ function VehicleDetailPage() {
       }
     } catch (error) {
       console.error('Erreur chargement véhicule:', error);
+      setLoadError(error.response?.data?.message || 'Impossible de charger ce vehicule pour le moment.');
     } finally {
       setLoading(false);
     }
   }, [id]);
   useEffect(() => {
     loadVehicle();
-    window.scrollTo(0, 0);
   }, [loadVehicle]);
 
   // UseEffect separated to avoid reloading vehicle just for auth change
@@ -358,12 +360,24 @@ function VehicleDetailPage() {
   if (!vehicle) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <EmptyState
-          icon={Car}
-          title="Véhicule introuvable"
-          message="Ce véhicule n'existe plus ou a été retiré."
-          action={<Link to="/vehicles"><Button>Voir les autres véhicules</Button></Link>}
-        />
+        <div className="w-full max-w-xl space-y-6">
+          {loadError ? (
+            <>
+              <Alert type="error" title="Chargement impossible" message={loadError} />
+              <div className="flex items-center justify-center gap-3">
+                <Button onClick={loadVehicle}>Reessayer</Button>
+                <Link to="/vehicles"><Button variant="outline">Retour au catalogue</Button></Link>
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              icon={Car}
+              title="Véhicule introuvable"
+              message="Ce véhicule n'existe plus ou a été retiré."
+              action={<Link to="/vehicles"><Button>Voir les autres véhicules</Button></Link>}
+            />
+          )}
+        </div>
       </div>
     );
   }
@@ -589,7 +603,11 @@ function VehicleDetailPage() {
 
               {comparisonLoading ? (
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <p className="text-slate-500">Comparaison en cours...</p>
+                  <div className="space-y-3">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-16 w-full rounded-xl" />
+                    <Skeleton className="h-16 w-full rounded-xl" />
+                  </div>
                 </div>
               ) : priceComparisons.length === 0 ? (
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
