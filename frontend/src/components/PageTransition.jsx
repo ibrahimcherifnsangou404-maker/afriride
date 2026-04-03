@@ -10,9 +10,10 @@ import { useLocation } from 'react-router-dom';
  */
 export default function PageTransition({ children }) {
   const location = useLocation();
+  const transitionKey = location.pathname;
 
   return (
-    <div key={location.key} className="page-enter-active">
+    <div key={transitionKey} className="page-enter-active">
       {children}
     </div>
   );

@@ -65,6 +65,10 @@ function VehiclesPage() {
     if (nextPage > 1) params.set('page', String(nextPage));
     if (nextSort && nextSort !== 'newest') params.set('sort', nextSort);
 
+    if (params.toString() === searchParams.toString()) {
+      return;
+    }
+
     setSearchParams(params, { replace: true });
   };
 
@@ -152,11 +156,37 @@ function VehiclesPage() {
     syncUrlState(nextFilters, 1, 'newest');
     setSortBy('newest');
     setPagination((prev) => ({ ...prev, page: 1 }));
-    loadData();
+
+    try {
+      setIsRefreshing(true);
+      const vehiclesData = await vehicleService.getVehicles({
+        ...nextFilters,
+        page: 1,
+        limit: pagination.limit
+      });
+      setVehicles(vehiclesData.data || []);
+      setPagination(vehiclesData.pagination || {
+        page: 1,
+        limit: pagination.limit,
+        totalItems: vehiclesData.total || (vehiclesData.data || []).length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
+    } catch (error) {
+      console.error('Erreur reinitialisation filtres:', error);
+      setError(error.response?.data?.message || 'Impossible de reinitialiser les resultats.');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const removeFilter = (key) => {
-    setFilters((prev) => ({ ...prev, [key]: '' }));
+    setFilters((prev) => {
+      const nextFilters = { ...prev, [key]: '' };
+      syncUrlState(nextFilters, 1, sortBy);
+      return nextFilters;
+    });
   };
 
   const getActiveFilterChips = () => {
@@ -207,10 +237,6 @@ function VehiclesPage() {
     applyFilters(nextPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  useEffect(() => {
-    syncUrlState(filters, pagination.page, sortBy);
-  }, [filters, pagination.page, sortBy]);
 
   useEffect(() => {
     vehicleService.prefetchCatalogue({ page: pagination.page, limit: pagination.limit });
