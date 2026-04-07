@@ -62,8 +62,9 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #16a34a;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
+  transition: box-shadow 0.2s ease-in-out;
 }
 
 /* Buttons */
@@ -100,17 +101,17 @@ textarea:focus {
 /* Scrollbar */
 ::-webkit-scrollbar {
   /* stylelint-disable-next-line at-rule-no-unknown */
-  @apply w-2 h-2;
+  @apply w-1.5 h-1.5;
 }
 
 ::-webkit-scrollbar-track {
   /* stylelint-disable-next-line at-rule-no-unknown */
-  @apply bg-slate-100;
+  @apply bg-transparent my-1;
 }
 
 ::-webkit-scrollbar-thumb {
   /* stylelint-disable-next-line at-rule-no-unknown */
-  @apply bg-primary-600 rounded-full hover:bg-primary-700;
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
 }
 
 /* Selection */

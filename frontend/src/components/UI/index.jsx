@@ -1,9 +1,9 @@
-﻿import { AlertCircle, CheckCircle, InfoIcon, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle, InfoIcon, AlertTriangle } from 'lucide-react';
 
 export function Card({ children, className = '', hover = true, ...props }) {
   return (
     <div
-      className={`bg-white rounded-2xl border border-slate-200 shadow-sm ${hover ? 'hover:shadow-lg hover:border-primary-200 hover:-translate-y-0.5' : ''
+      className={`bg-white rounded-2xl border border-slate-200 shadow-sm ${hover ? 'hover:shadow-xl hover:border-primary-200 hover:-translate-y-1 hover:shadow-primary-600/5' : ''
         } transition-all duration-300 ${className}`}
       {...props}
     >
@@ -55,7 +55,7 @@ export function Button({
   disabled = false,
   ...props
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100';
 
   const variants = {
     primary: 'bg-primary-600 text-white hover:bg-primary-700 hover:shadow-md focus:ring-primary-500',
@@ -128,7 +128,7 @@ export function Input({
         <input
           type={type}
           placeholder={placeholder}
-          className={`w-full ${Icon ? 'pl-10' : 'px-4'} h-11 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition ${error ? 'border-red-500 bg-red-50' : 'border-slate-300 bg-white'
+          className={`w-full ${Icon ? 'pl-10' : 'px-4'} h-11 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 hover:border-slate-400 transition-all shadow-sm ${error ? 'border-red-500 bg-red-50 focus:ring-red-500' : 'border-slate-300 bg-white'
             } ${className}`}
           {...props}
         />
