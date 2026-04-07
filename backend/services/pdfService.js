@@ -150,6 +150,17 @@ const renderPaymentReceipt = (doc, { payment, booking, vehicle, agency, user }) 
   );
 };
 
+const compactLine = (value, fallback = '-') => {
+  if (!value && value !== 0) return fallback;
+  return String(value).replace(/\s+/g, ' ').trim() || fallback;
+};
+
+const compactParagraph = (value, fallback, maxChars) => {
+  const cleanText = compactLine(value, fallback);
+  if (cleanText.length <= maxChars) return cleanText;
+  return `${cleanText.slice(0, maxChars - 1).trim()}...`;
+};
+
 const pdfService = {
   generateContractPDF: async (contract, vehicle, client, agency) => {
     return new Promise((resolve, reject) => {
@@ -161,132 +172,135 @@ const pdfService = {
 
         const pdfPath = path.join(docsDir, `Contrat_${contract.contractNumber}.pdf`);
         const doc = new PDFDocument({
-          margin: 50,
+          margin: 34,
           size: 'A4'
         });
 
         const stream = fs.createWriteStream(pdfPath);
         doc.pipe(stream);
 
-        doc.fontSize(20).font('Helvetica-Bold').text('CONTRAT DE LOCATION', { align: 'center' });
-        doc.fontSize(10).font('Helvetica').text('AfriRide - Plateforme de Location de Vehicules', { align: 'center' });
-        doc.moveDown();
-
-        doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-        doc.moveDown();
-
-        doc.fontSize(11).font('Helvetica-Bold').text(`Numero de Contrat: ${contract.contractNumber}`, 50);
-        doc.fontSize(10).font('Helvetica').text(`Date: ${new Date().toLocaleDateString('fr-FR')}`, 50);
-        doc.moveDown();
-
-        doc.fontSize(12).font('Helvetica-Bold').text('1. PARTIES AU CONTRAT', 50);
-        doc.fontSize(10).font('Helvetica').text(
-          `LOCATEUR: ${agency.name}\n` +
-          `Adresse: ${agency.address || 'Non specifiee'}\n` +
-          `Telephone: ${agency.phone || 'Non specifie'}\n\n` +
-          `LOCATAIRE: ${client.firstName} ${client.lastName}\n` +
-          `Email: ${client.email}\n` +
-          `Telephone: ${client.phone}`,
-          50, { width: 450, align: 'left' }
-        );
-        doc.moveDown();
-
-        doc.fontSize(12).font('Helvetica-Bold').text('2. VEHICULE LOUE', 50);
-        doc.fontSize(10).font('Helvetica').text(
-          `Marque et Modele: ${vehicle.brand} ${vehicle.model}\n` +
-          `Plaque d'immatriculation: ${vehicle.licensePlate}\n` +
-          `Type de carburant: ${vehicle.fuelType}\n` +
-          `Couleur: ${vehicle.color || 'Non specifiee'}\n` +
-          `Annee: ${vehicle.year || 'Non specifiee'}`,
-          50, { width: 450 }
-        );
-        doc.moveDown();
-
-        doc.fontSize(12).font('Helvetica-Bold').text('3. DATES ET DUREE DE LOCATION', 50);
         const startDate = new Date(contract.startDate).toLocaleDateString('fr-FR');
         const endDate = new Date(contract.endDate).toLocaleDateString('fr-FR');
         let days = Math.ceil((new Date(contract.endDate) - new Date(contract.startDate)) / (1000 * 60 * 60 * 24));
         if (days < 1 || Number.isNaN(days)) days = 1;
-        doc.fontSize(10).font('Helvetica').text(
-          `Date de debut: ${startDate}\n` +
-          `Date de fin: ${endDate}\n` +
-          `Duree: ${days} jour(s)`,
-          50, { width: 450 }
-        );
-        doc.moveDown();
-
-        doc.fontSize(12).font('Helvetica-Bold').text('4. TARIFICATION', 50);
         const totalAmount = contract.totalAmount || 0;
         const pricePerDay = days > 0 ? totalAmount / days : totalAmount;
         const validPricePerDay = Number.isNaN(pricePerDay) ? 0 : pricePerDay;
         const validTotal = Number.isNaN(totalAmount) ? 0 : totalAmount;
-        doc.fontSize(10).font('Helvetica').text(
-          `Prix par jour: ${validPricePerDay.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}\n` +
-          `Nombre de jours: ${days}\n` +
-          `Montant total: ${validTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}`,
-          50, { width: 450 }
+
+        const margin = 34;
+        const pageWidth = doc.page.width;
+        const pageHeight = doc.page.height;
+        const contentWidth = pageWidth - (margin * 2);
+        const columnGap = 14;
+        const columnWidth = (contentWidth - columnGap) / 2;
+
+        const clientName = compactLine(`${client.firstName || ''} ${client.lastName || ''}`, '-');
+        const agencyName = compactLine(agency.name, '-');
+        const vehicleLabel = compactLine(`${vehicle.brand || ''} ${vehicle.model || ''}`, '-');
+        const paymentTerms = compactParagraph(
+          contract.paymentTerms,
+          'Paiement integral avant remise du vehicule.',
+          120
         );
-        doc.moveDown();
-
-        doc.fontSize(12).font('Helvetica-Bold').text('5. CONDITIONS DE PAIEMENT', 50);
-        doc.fontSize(9).font('Helvetica').text(
-          contract.paymentTerms || 'Le montant total doit etre paye avant la recuperation du vehicule.',
-          50, { width: 450, align: 'left' }
+        const generalTerms = compactParagraph(
+          contract.terms,
+          'Location soumise aux conditions AfriRide et au respect du code de la route.',
+          240
         );
-        doc.moveDown();
 
-        doc.fontSize(12).font('Helvetica-Bold').text('6. CONDITIONS GENERALES', 50);
-        doc.fontSize(9).font('Helvetica').text(
-          contract.terms || 'Conditions standard de location. Le locataire accepte les conditions de la plateforme AfriRide.',
-          50, { width: 450, align: 'left' }
-        );
-        doc.moveDown();
+        doc.font('Helvetica-Bold').fontSize(17).fillColor('#0f172a')
+          .text('CONTRAT DE LOCATION', margin, 30, { width: contentWidth, align: 'center' });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#475569')
+          .text('AfriRide - Contrat simplifie', margin, 50, { width: contentWidth, align: 'center' });
 
-        doc.fontSize(12).font('Helvetica-Bold').text('7. RESPONSABILITES DU LOCATAIRE', 50);
-        doc.fontSize(9).font('Helvetica').text(
-          '- Utiliser le vehicule conformement aux lois en vigueur\n' +
-          '- Maintenir le vehicule en bon etat\n' +
-          '- Effectuer les petits entretiens (carburant, eau)\n' +
-          '- Retourner le vehicule a temps\n' +
-          '- Signaler tout dommage immediatement\n' +
-          '- Fournir une assurance automobile valide',
-          50, { width: 450 }
-        );
-        doc.moveDown();
+        doc.lineWidth(0.9).strokeColor('#cbd5e1')
+          .moveTo(margin, 66).lineTo(pageWidth - margin, 66).stroke();
 
-        doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-        doc.moveDown();
+        doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#0f172a')
+          .text(`No ${compactLine(contract.contractNumber, '-')}`, margin, 76);
+        doc.font('Helvetica').fontSize(8.5).fillColor('#334155')
+          .text(`Date: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - margin - 120, 76, { width: 120, align: 'right' });
 
-        doc.fontSize(12).font('Helvetica-Bold').text('8. SIGNATURES', 50);
-        doc.moveDown(1);
+        const blockTop = 98;
+        const blockHeight = 102;
+        const leftX = margin;
+        const rightX = margin + columnWidth + columnGap;
 
-        const signBoxY = doc.y;
-        const signBoxWidth = 180;
-        const signBoxHeight = 60;
+        doc.lineWidth(0.8).strokeColor('#dbe4ee').rect(leftX, blockTop, columnWidth, blockHeight).stroke();
+        doc.lineWidth(0.8).strokeColor('#dbe4ee').rect(rightX, blockTop, columnWidth, blockHeight).stroke();
 
-        doc.rect(50, signBoxY, signBoxWidth, signBoxHeight).stroke();
-        doc.fontSize(9).font('Helvetica-Bold').text('Signature Locataire', 55, signBoxY + 5);
-        if (contract.clientSignatureDate) {
-          doc.fontSize(8).font('Helvetica').text(
-            `Signe le: ${new Date(contract.clientSignatureDate).toLocaleDateString('fr-FR')}`,
-            55, signBoxY + 35
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#0f172a').text('PARTIES', leftX + 8, blockTop + 8);
+        doc.font('Helvetica').fontSize(8).fillColor('#334155')
+          .text(
+            `Locateur: ${agencyName}\nAdresse: ${compactParagraph(agency.address, 'Non specifiee', 62)}\nTel: ${compactLine(agency.phone, 'Non specifie')}\n\nLocataire: ${clientName}\nEmail: ${compactParagraph(client.email, '-', 36)}\nTel: ${compactLine(client.phone, 'Non specifie')}`,
+            leftX + 8,
+            blockTop + 24,
+            { width: columnWidth - 16, lineGap: 1.5 }
           );
-        }
 
-        doc.rect(320, signBoxY, signBoxWidth, signBoxHeight).stroke();
-        doc.fontSize(9).font('Helvetica-Bold').text('Signature Locateur', 325, signBoxY + 5);
-        if (contract.agencySignatureDate) {
-          doc.fontSize(8).font('Helvetica').text(
-            `Signe le: ${new Date(contract.agencySignatureDate).toLocaleDateString('fr-FR')}`,
-            325, signBoxY + 35
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#0f172a').text('VEHICULE & DUREE', rightX + 8, blockTop + 8);
+        doc.font('Helvetica').fontSize(8).fillColor('#334155')
+          .text(
+            `Modele: ${vehicleLabel}\nImmatriculation: ${compactLine(vehicle.licensePlate, '-')}\nCarburant: ${compactLine(vehicle.fuelType, '-')}\nAnnee: ${compactLine(vehicle.year, '-')}\n\nDu ${startDate} au ${endDate}\nDuree: ${days} jour(s)`,
+            rightX + 8,
+            blockTop + 24,
+            { width: columnWidth - 16, lineGap: 1.5 }
           );
-        }
 
-        doc.moveDown(5);
-        doc.fontSize(8).font('Helvetica').text(
-          'Ce contrat a ete genere electroniquement par la plateforme AfriRide. Les signatures numeriques sont legalement valables.',
-          50, doc.y, { width: 450, align: 'center', color: '#666' }
+        const pricingTop = blockTop + blockHeight + 12;
+        const pricingHeight = 56;
+        doc.lineWidth(0.8).strokeColor('#dbe4ee').rect(margin, pricingTop, contentWidth, pricingHeight).stroke();
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#0f172a').text('TARIFICATION', margin + 8, pricingTop + 8);
+        doc.font('Helvetica').fontSize(8.2).fillColor('#334155').text(
+          `Prix/jour: ${validPricePerDay.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}   |   Nombre de jours: ${days}   |   Montant total: ${validTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}`,
+          margin + 8,
+          pricingTop + 26,
+          { width: contentWidth - 16 }
         );
+
+        const termsTop = pricingTop + pricingHeight + 10;
+        const termsHeight = 158;
+        doc.lineWidth(0.8).strokeColor('#dbe4ee').rect(margin, termsTop, contentWidth, termsHeight).stroke();
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#0f172a').text('CONDITIONS', margin + 8, termsTop + 8);
+        doc.font('Helvetica').fontSize(8).fillColor('#334155')
+          .text(`Paiement: ${paymentTerms}`, margin + 8, termsTop + 24, { width: contentWidth - 16 });
+        doc.text(`Conditions generales: ${generalTerms}`, margin + 8, termsTop + 46, { width: contentWidth - 16, lineGap: 1.2 });
+        doc.text(
+          'Responsabilites locataire: utilisation legale, entretien courant, retour a l heure, signalement immediat des dommages, assurance valide.',
+          margin + 8,
+          termsTop + 86,
+          { width: contentWidth - 16, lineGap: 1.2 }
+        );
+
+        const signaturesTop = termsTop + termsHeight + 10;
+        const signBoxWidth = (contentWidth - columnGap) / 2;
+        const signBoxHeight = 62;
+        doc.lineWidth(0.8).strokeColor('#cbd5e1').rect(margin, signaturesTop, signBoxWidth, signBoxHeight).stroke();
+        doc.lineWidth(0.8).strokeColor('#cbd5e1').rect(margin + signBoxWidth + columnGap, signaturesTop, signBoxWidth, signBoxHeight).stroke();
+
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#0f172a').text('Signature Locataire', margin + 8, signaturesTop + 8);
+        doc.font('Helvetica').fontSize(7.8).fillColor('#475569').text(
+          contract.clientSignatureDate ? `Signe le: ${new Date(contract.clientSignatureDate).toLocaleDateString('fr-FR')}` : 'Non signe',
+          margin + 8,
+          signaturesTop + 42
+        );
+
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#0f172a').text('Signature Locateur', margin + signBoxWidth + columnGap + 8, signaturesTop + 8);
+        doc.font('Helvetica').fontSize(7.8).fillColor('#475569').text(
+          contract.agencySignatureDate ? `Signe le: ${new Date(contract.agencySignatureDate).toLocaleDateString('fr-FR')}` : 'Non signe',
+          margin + signBoxWidth + columnGap + 8,
+          signaturesTop + 42
+        );
+
+        const footerY = Math.min(pageHeight - 34, signaturesTop + signBoxHeight + 10);
+        doc.font('Helvetica').fontSize(7.2).fillColor('#64748b')
+          .text(
+            'Document genere electroniquement par AfriRide. Ce format compact est valide au meme titre que la version detaillee.',
+            margin,
+            footerY,
+            { width: contentWidth, align: 'center' }
+          );
 
         doc.end();
 
