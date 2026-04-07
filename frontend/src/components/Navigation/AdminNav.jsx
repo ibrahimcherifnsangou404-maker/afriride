@@ -102,7 +102,7 @@ export default function AdminNav() {
           <div className="flex items-center justify-between h-16">
             <Link to="/admin/dashboard" className="flex items-center space-x-2 flex-shrink-0 group">
               <img src={logo} alt="AfriRide Admin" className="h-9 w-auto object-contain transform group-hover:scale-105 transition-transform" />
-              <span className="text-xl font-bold text-slate-900 hidden sm:inline">Admin</span>
+              <div className="hidden sm:block"><span className="text-xl font-bold text-slate-900">AfriRide</span><p className="text-xs text-slate-500">Admin</p></div>
             </Link>
 
             <div className="hidden md:flex items-center gap-1">
@@ -253,3 +253,4 @@ export default function AdminNav() {
     </>
   );
 }
+

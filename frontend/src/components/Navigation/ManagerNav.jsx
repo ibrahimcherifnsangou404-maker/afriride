@@ -97,7 +97,7 @@ export default function ManagerNav() {
             <Link to="/manager/dashboard" className="flex items-center space-x-2 flex-shrink-0 group">
               <img src={logo} alt="AfriRide Manager" className="h-9 w-auto object-contain transform group-hover:scale-105 transition-transform" />
               <div className="hidden sm:block">
-                <span className="text-xl font-bold text-slate-900">Manager</span>
+                <div><span className="text-xl font-bold text-slate-900">AfriRide</span><p className="text-xs text-slate-500">Manager</p></div>
                 <p className="text-xs text-slate-500">{user?.agency?.name || 'Mon agence'}</p>
               </div>
             </Link>
@@ -249,3 +249,4 @@ export default function ManagerNav() {
     </>
   );
 }
+

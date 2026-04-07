@@ -51,6 +51,7 @@ export default function PublicNav() {
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2 flex-shrink-0 group">
             <img src={logo} alt="AfriRide" className="h-9 w-auto object-contain transform group-hover:scale-105 transition-transform" />
+            <span className="text-xl font-bold text-slate-900">AfriRide</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
