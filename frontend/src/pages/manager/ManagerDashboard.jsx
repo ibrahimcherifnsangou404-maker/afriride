@@ -10,7 +10,7 @@ import { PageSkeleton } from '../../components/UI';
 const money = (v) => `${Number(v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} FCFA`;
 
 const statusLabel = (s) => (s === 'pending' ? 'En attente' : s === 'confirmed' ? 'Validee' : s === 'completed' ? 'Terminee' : 'Annulee');
-const statusStyle = (s) => (s === 'pending' ? 'bg-amber-400/15 text-amber-200 border-amber-300/30' : s === 'confirmed' ? 'bg-emerald-400/15 text-emerald-200 border-emerald-300/30' : s === 'completed' ? 'bg-cyan-400/15 text-cyan-100 border-cyan-300/30' : 'bg-rose-400/15 text-rose-200 border-rose-300/30');
+const statusStyle = (s) => (s === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' : s === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : s === 'completed' ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-rose-50 text-rose-700 border-rose-200');
 
 function ManagerDashboard() {
   const navigate = useNavigate();
@@ -116,59 +116,58 @@ function ManagerDashboard() {
   if (loading) return <PageSkeleton variant="dashboard" />;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050b1f] p-4 sm:p-6 lg:p-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_86%_18%,rgba(99,102,241,0.18),transparent_38%),radial-gradient(circle_at_72%_86%,rgba(16,185,129,0.12),transparent_35%)]" />
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
       <div className="relative mx-auto max-w-7xl space-y-6 font-['Sora']">
         <div className="fixed right-6 top-6 z-50 flex flex-col gap-2 pointer-events-none">{toasts.map((t) => <div key={t.id} className="pointer-events-auto"><Toast message={t.message} type={t.type} onClose={() => removeToast(t.id)} /></div>)}</div>
 
-        <section className="rounded-[2rem] border border-white/15 bg-slate-900/65 p-6 backdrop-blur-xl">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-cyan-100"><Sparkles className="h-3.5 w-3.5" />Command Center</div>
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Tableau de bord ultra dynamique</h1>
-              <p className="text-sm font-medium text-slate-300">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-blue-700"><Sparkles className="h-3.5 w-3.5" />Dashboard</div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Vue d'ensemble</h1>
+              <p className="text-sm font-medium text-slate-500">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={handleExport} disabled={isActionLoading} className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-60"><Download className="h-4 w-4" />Exporter</button>
-              <button onClick={() => navigate('/manager/add-vehicle')} className="rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-2.5 text-sm font-black text-slate-950">Nouveau vehicule</button>
+              <button onClick={handleExport} disabled={isActionLoading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"><Download className="h-4 w-4" />Exporter</button>
+              <button onClick={() => navigate('/manager/vehicles/add')} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white hover:bg-slate-800">Nouveau vehicule</button>
             </div>
           </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Flotte</p><p className="mt-2 text-4xl font-black">{stats.totalVehicles || 0}</p><p className="text-sm text-slate-300">{stats.availableVehicles || 0} disponibles</p></div>
-          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Reservations</p><p className="mt-2 text-4xl font-black">{bookings.length || 0}</p><p className="text-sm text-slate-300">{pendingCount} en attente</p></div>
-          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Revenus</p><p className="mt-2 text-4xl font-black">{money(totalRevenue)}</p><p className="text-sm text-slate-300">mise a jour live</p></div>
-          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Occupation</p><p className="mt-2 text-4xl font-black">{occupancyRate}%</p><p className="text-sm text-slate-300">performance agence</p></div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs uppercase tracking-[0.14em] text-slate-500">Flotte</p><p className="mt-2 text-4xl font-black text-slate-900">{stats.totalVehicles || 0}</p><p className="text-sm text-slate-500">{stats.availableVehicles || 0} disponibles</p></div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs uppercase tracking-[0.14em] text-slate-500">Reservations</p><p className="mt-2 text-4xl font-black text-slate-900">{bookings.length || 0}</p><p className="text-sm text-slate-500">{pendingCount} en attente</p></div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs uppercase tracking-[0.14em] text-slate-500">Revenus</p><p className="mt-2 text-4xl font-black text-slate-900">{money(totalRevenue)}</p><p className="text-sm text-slate-500">mise a jour live</p></div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs uppercase tracking-[0.14em] text-slate-500">Occupation</p><p className="mt-2 text-4xl font-black text-slate-900">{occupancyRate}%</p><p className="text-sm text-slate-500">performance agence</p></div>
         </section>
 
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
-          <div className="overflow-hidden rounded-[1.75rem] border border-white/15 bg-slate-900/70">
-            <div className="flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative w-full sm:w-80">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Chercher reservation..." className="w-full rounded-xl border border-white/15 bg-slate-950/40 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-slate-400" />
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Chercher reservation..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-700 placeholder:text-slate-400" />
               </div>
               <div className="flex gap-2 overflow-x-auto">
-                {['all', 'pending', 'confirmed', 'completed'].map((status) => <button key={status} onClick={() => setStatusFilter(status)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wide ${statusFilter === status ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 text-slate-950' : 'border border-white/15 bg-white/5 text-slate-300'}`}>{status === 'all' ? 'Toutes' : statusLabel(status)}</button>)}
+                {['all', 'pending', 'confirmed', 'completed'].map((status) => <button key={status} onClick={() => setStatusFilter(status)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wide ${statusFilter === status ? 'bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-500'}`}>{status === 'all' ? 'Toutes' : statusLabel(status)}</button>)}
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px]">
-                <thead><tr className="border-b border-white/10 text-left text-xs uppercase tracking-[0.14em] text-slate-400"><th className="px-6 py-4">Vehicule</th><th className="px-6 py-4">Client</th><th className="px-6 py-4">Periode</th><th className="px-6 py-4">Statut</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
-                <tbody className="divide-y divide-white/5">
+                <thead><tr className="border-b border-slate-100 text-left text-xs uppercase tracking-[0.14em] text-slate-400"><th className="px-6 py-4">Vehicule</th><th className="px-6 py-4">Client</th><th className="px-6 py-4">Periode</th><th className="px-6 py-4">Statut</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
+                <tbody className="divide-y divide-slate-100">
                   {paginatedBookings.length === 0 ? <tr><td colSpan="5" className="px-6 py-12 text-center text-sm text-slate-400">Aucune reservation trouvee</td></tr> : paginatedBookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-white/[0.03]">
-                      <td className="px-6 py-4 text-white">{b.vehicle?.brand} {b.vehicle?.model}</td>
-                      <td className="px-6 py-4 text-slate-200">{b.user?.firstName} {b.user?.lastName}</td>
-                      <td className="px-6 py-4 text-slate-300">{new Date(b.startDate).toLocaleDateString('fr-FR')} au {new Date(b.endDate).toLocaleDateString('fr-FR')}</td>
+                    <tr key={b.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 text-slate-900">{b.vehicle?.brand} {b.vehicle?.model}</td>
+                      <td className="px-6 py-4 text-slate-700">{b.user?.firstName} {b.user?.lastName}</td>
+                      <td className="px-6 py-4 text-slate-600">{new Date(b.startDate).toLocaleDateString('fr-FR')} au {new Date(b.endDate).toLocaleDateString('fr-FR')}</td>
                       <td className="px-6 py-4"><span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusStyle(b.status)}`}>{statusLabel(b.status)}</span></td>
                       <td className="px-6 py-4"><div className="flex justify-end gap-1">
-                        <button onClick={() => { setSelectedBooking(b); setIsDetailsModalOpen(true); }} className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-300"><Eye className="h-4 w-4" /></button>
-                        <button onClick={() => openClientConversation(b)} className="rounded-lg border border-cyan-300/20 bg-cyan-400/15 p-2 text-cyan-100"><MessageCircle className="h-4 w-4" /></button>
+                        <button onClick={() => { setSelectedBooking(b); setIsDetailsModalOpen(true); }} className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:text-slate-700"><Eye className="h-4 w-4" /></button>
+                        <button onClick={() => openClientConversation(b)} className="rounded-lg border border-indigo-200 bg-indigo-50 p-2 text-indigo-600 hover:bg-indigo-100"><MessageCircle className="h-4 w-4" /></button>
                         {b.status === 'pending' ? <>
-                          <button onClick={() => updateBookingStatus(b.id, 'confirm')} className="rounded-lg border border-emerald-300/20 bg-emerald-400/15 p-2 text-emerald-100"><CheckCircle className="h-4 w-4" /></button>
-                          <button onClick={() => updateBookingStatus(b.id, 'reject')} className="rounded-lg border border-rose-300/20 bg-rose-400/15 p-2 text-rose-100"><XCircle className="h-4 w-4" /></button>
+                          <button onClick={() => updateBookingStatus(b.id, 'confirm')} className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-emerald-600 hover:bg-emerald-100"><CheckCircle className="h-4 w-4" /></button>
+                          <button onClick={() => updateBookingStatus(b.id, 'reject')} className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-600 hover:bg-rose-100"><XCircle className="h-4 w-4" /></button>
                         </> : null}
                       </div></td>
                     </tr>
@@ -176,18 +175,18 @@ function ManagerDashboard() {
                 </tbody>
               </table>
             </div>
-            {filteredBookings.length > itemsPerPage ? <div className="flex items-center justify-between border-t border-white/10 px-5 py-4 text-sm text-slate-300"><button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Precedent</button><span>Page {currentPage}/{totalPages}</span><button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>Suivant</button></div> : null}
+            {filteredBookings.length > itemsPerPage ? <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-sm text-slate-500"><button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Precedent</button><span>Page {currentPage}/{totalPages}</span><button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>Suivant</button></div> : null}
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-[1.75rem] border border-white/15 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-5">
+            <div className="rounded-[1.75rem] border border-slate-200 bg-slate-900 p-5">
               <h3 className="text-lg font-black text-white">Actions rapides</h3>
               <div className="mt-4 space-y-3">
-                <button onClick={() => (user?.role === 'admin' ? navigate('/admin/kyc') : navigate('/manager/kyc'))} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-left"><ShieldCheck className="h-5 w-5 text-amber-200" /><div><p className="text-sm font-bold text-white">Identites a verifier</p><p className="text-xs text-slate-300">{pendingCount} en attente</p></div></button>
-                <button onClick={() => navigate('/manager/bookings')} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-left"><Clock className="h-5 w-5 text-indigo-200" /><div><p className="text-sm font-bold text-white">Planning reservations</p><p className="text-xs text-slate-300">gerer les disponibilites</p></div></button>
+                <button onClick={() => (user?.role === 'admin' ? navigate('/admin/kyc') : navigate('/manager/kyc'))} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left"><ShieldCheck className="h-5 w-5 text-amber-500" /><div><p className="text-sm font-bold text-slate-900">Identites a verifier</p><p className="text-xs text-slate-500">{pendingCount} en attente</p></div></button>
+                <button onClick={() => navigate('/manager/bookings')} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left"><Clock className="h-5 w-5 text-indigo-500" /><div><p className="text-sm font-bold text-slate-900">Planning reservations</p><p className="text-xs text-slate-500">gerer les disponibilites</p></div></button>
               </div>
             </div>
-            <div className="rounded-[1.75rem] border border-white/15 bg-slate-900/70 p-5"><p className="text-xs uppercase tracking-[0.16em] text-slate-400">Votre agence</p><p className="mt-2 text-xl font-black text-white">AfriRide Yaounde</p><p className="text-sm text-slate-300">ID: {user?.agencyId?.split('-')?.[0] || '...'}</p></div>
+            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5"><p className="text-xs uppercase tracking-[0.16em] text-slate-400">Votre agence</p><p className="mt-2 text-xl font-black text-slate-900">AfriRide Yaounde</p><p className="text-sm text-slate-500">ID: {user?.agencyId?.split('-')?.[0] || '...'}</p></div>
           </div>
         </section>
       </div>
