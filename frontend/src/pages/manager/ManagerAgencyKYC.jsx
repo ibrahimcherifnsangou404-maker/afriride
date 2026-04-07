@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Clock3, FileText, ShieldCheck, Upload } from 'lucide-react';
 import { managerService } from '../../services/managerService';
-import { API_BASE_URL } from '../../services/api';
+import { ProtectedDocumentButton } from '../../components/ProtectedDocument';
 
 const statusMeta = {
   unverified: {
@@ -230,14 +230,12 @@ function ManagerAgencyKYC() {
               <div key={label} className="rounded-2xl border border-slate-200 px-4 py-3">
                 <p className="text-sm font-semibold text-slate-800">{label}</p>
                 {file ? (
-                  <a
-                    href={`${API_BASE_URL}${file}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <ProtectedDocumentButton
+                    path={file}
                     className="mt-2 inline-block text-sm text-blue-600 hover:text-blue-700"
                   >
                     Voir le document
-                  </a>
+                  </ProtectedDocumentButton>
                 ) : (
                   <p className="mt-2 text-sm text-slate-500">Aucun document envoye</p>
                 )}

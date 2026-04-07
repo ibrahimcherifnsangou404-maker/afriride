@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
+import logo from '../../assets/afriride-logo.png';
 
 export default function ManagerNav() {
   const { user, logout } = useContext(AuthContext);
@@ -94,9 +95,7 @@ export default function ManagerNav() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/manager/dashboard" className="flex items-center space-x-2 flex-shrink-0 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-transform">
-                <Car className="w-5 h-5 text-white" />
-              </div>
+              <img src={logo} alt="AfriRide Manager" className="h-9 w-auto object-contain transform group-hover:scale-105 transition-transform" />
               <div className="hidden sm:block">
                 <span className="text-xl font-bold text-slate-900">Manager</span>
                 <p className="text-xs text-slate-500">{user?.agency?.name || 'Mon agence'}</p>

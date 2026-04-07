@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Clock3, ExternalLink, ShieldCheck, XCircle } from 'lucide-react';
 import { adminService } from '../../services/adminService';
-import { API_BASE_URL } from '../../services/api';
+import { ProtectedDocumentButton } from '../../components/ProtectedDocument';
 
 const tabs = ['pending', 'verified', 'rejected', 'unverified'];
 
@@ -149,15 +149,13 @@ function AdminAgencyKyc() {
                         <div key={label} className="rounded-2xl border border-slate-200 px-4 py-3">
                           <p className="text-sm font-semibold text-slate-800">{label}</p>
                           {file ? (
-                            <a
-                              href={`${API_BASE_URL}${file}`}
-                              target="_blank"
-                              rel="noreferrer"
+                            <ProtectedDocumentButton
+                              path={file}
                               className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
                             >
                               Ouvrir
                               <ExternalLink className="w-4 h-4" />
-                            </a>
+                            </ProtectedDocumentButton>
                           ) : (
                             <p className="mt-2 text-sm text-slate-500">Document manquant</p>
                           )}

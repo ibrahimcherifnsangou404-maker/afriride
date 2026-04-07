@@ -1,9 +1,9 @@
 ﻿import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Clock, User, Download, ExternalLink } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, FileText, AlertCircle, Clock, User, ExternalLink } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { Card, Button, Badge, PageSkeleton } from '../../components/UI';
 import { Modal } from '../../components/Modal';
-import { API_BASE_URL } from '../../services/api';
+import { ProtectedDocumentButton, ProtectedDocumentImage } from '../../components/ProtectedDocument';
 
 function ManagerKYC() {
     const [users, setUsers] = useState([]);
@@ -143,11 +143,9 @@ function ManagerKYC() {
                                                     <p className="text-xs font-medium text-slate-600">Document PDF</p>
                                                 </div>
                                             ) : (
-                                                <img
-                                                    src={`${API_BASE_URL}${selectedUser[doc.field]}`}
+                                                <ProtectedDocumentImage
+                                                    path={selectedUser[doc.field]}
                                                     alt={doc.label}
-                                                    loading="lazy"
-                                                    decoding="async"
                                                     className="w-full h-full object-cover"
                                                 />
                                             )
@@ -159,14 +157,12 @@ function ManagerKYC() {
 
                                         {selectedUser[doc.field] && (
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                <a
-                                                    href={`${API_BASE_URL}${selectedUser[doc.field]}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
+                                                <ProtectedDocumentButton
+                                                    path={selectedUser[doc.field]}
                                                     className="p-2 bg-white rounded-full text-slate-900 hover:scale-110 transition-transform"
                                                 >
                                                     <ExternalLink className="w-4 h-4" />
-                                                </a>
+                                                </ProtectedDocumentButton>
                                             </div>
                                         )}
                                     </div>

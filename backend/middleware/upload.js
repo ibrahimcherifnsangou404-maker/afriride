@@ -2,9 +2,13 @@
 const path = require('path');
 const fs = require('fs');
 
-// CrÃ©er les dossiers s'ils n'existent pas
-const uploadDirs = ['uploads/vehicles', 'uploads/documents', 'uploads/agencies'];
-uploadDirs.forEach(dir => {
+const uploadRoot = path.resolve(__dirname, '..', 'uploads');
+const vehiclesDir = path.join(uploadRoot, 'vehicles');
+const documentsDir = path.join(uploadRoot, 'documents');
+const agenciesDir = path.join(uploadRoot, 'agencies');
+
+// CrÃ©er les dossiers s'ils n'existent pas avec des chemins absolus
+[vehiclesDir, documentsDir, agenciesDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -15,11 +19,11 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // DÃ©terminer le dossier en fonction du champ
     if (['idCardFront', 'idCardBack', 'drivingLicense', 'businessLicense', 'taxCertificate', 'insuranceCertificate'].includes(file.fieldname)) {
-      cb(null, 'uploads/documents/');
+      cb(null, documentsDir);
     } else if (['agencyLogo'].includes(file.fieldname)) {
-      cb(null, 'uploads/agencies/');
+      cb(null, agenciesDir);
     } else {
-      cb(null, 'uploads/vehicles/');
+      cb(null, vehiclesDir);
     }
   },
   filename: function (req, file, cb) {

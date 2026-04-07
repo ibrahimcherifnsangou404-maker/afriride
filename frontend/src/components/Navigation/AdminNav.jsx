@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useUnreadMessages } from '../../hooks/useUnreadMessages';
+import logo from '../../assets/afriride-logo.png';
 
 export default function AdminNav() {
   const { user, logout } = useContext(AuthContext);
@@ -100,9 +101,7 @@ export default function AdminNav() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/admin/dashboard" className="flex items-center space-x-2 flex-shrink-0 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-slate-900 to-slate-700 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-transform">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
+              <img src={logo} alt="AfriRide Admin" className="h-9 w-auto object-contain transform group-hover:scale-105 transition-transform" />
               <span className="text-xl font-bold text-slate-900 hidden sm:inline">Admin</span>
             </Link>
 
