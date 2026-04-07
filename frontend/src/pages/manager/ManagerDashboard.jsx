@@ -1,148 +1,57 @@
-import { useState, useEffect, useContext, useCallback, createElement } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Calendar, Clock, CheckCircle, XCircle,
-  BarChart3, TrendingUp, Download, Eye,
-  MessageCircle, ChevronRight, AlertCircle,
-  Search, Filter, Users, Car, Wallet, ArrowUpRight
-} from 'lucide-react';
+import { Car, Download, Search, Eye, MessageCircle, CheckCircle, XCircle, Sparkles, ShieldCheck, Clock } from 'lucide-react';
 import { managerService } from '../../services/managerService';
 import { AuthContext } from '../../context/AuthContext';
 import { Toast } from '../../components/Toast';
 import { Modal } from '../../components/Modal';
 import { PageSkeleton } from '../../components/UI';
 
-// --- VISUAL COMPONENTS ---
+const money = (v) => `${Number(v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} FCFA`;
 
-const StatCard = ({ title, value, subtext, icon, trend, color, onClick }) => {
-  const colorStyles = {
-    blue: "bg-blue-50 text-blue-600 ring-blue-500/20",
-    indigo: "bg-indigo-50 text-indigo-600 ring-indigo-500/20",
-    emerald: "bg-emerald-50 text-emerald-600 ring-emerald-500/20",
-    amber: "bg-amber-50 text-amber-600 ring-amber-500/20",
-  };
-  const activeStyle = colorStyles[color] || colorStyles.blue;
-  const Component = onClick ? 'button' : 'div';
-
-  return (
-    <Component
-      onClick={onClick}
-      className={`relative overflow-hidden bg-white/80 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group text-left w-full ${onClick ? 'cursor-pointer' : ''}`}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-2xl ring-1 ${activeStyle} transition-colors`}>
-          {createElement(icon, { className: "w-6 h-6" })}
-        </div>
-        {trend && (
-          <div className="flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
-            <TrendingUp className="w-3.5 h-3.5 text-green-600" />
-            <span className="text-xs font-bold text-green-700">{trend}</span>
-          </div>
-        )}
-      </div>
-      <div>
-        <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
-        <h3 className="text-3xl font-black text-slate-800 tracking-tight group-hover:scale-105 transition-transform origin-left">
-          {value}
-        </h3>
-        {subtext && <p className="text-sm text-slate-400 mt-1 font-medium">{subtext}</p>}
-      </div>
-      {/* Decoration */}
-      <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full opacity-5 ${activeStyle.split(' ')[0]} blur-2xl group-hover:opacity-10 transition-opacity`} />
-    </Component>
-  );
-};
-
-const QuickActionRow = ({ icon, title, subtitle, onClick, color = "blue", count }) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300 group text-left"
-  >
-    <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600 group-hover:scale-110 transition-transform`}>
-      {createElement(icon, { className: "w-5 h-5" })}
-    </div>
-    <div className="flex-1 min-w-0">
-      <h4 className="font-bold text-slate-800 truncate">{title}</h4>
-      <p className="text-sm text-slate-500 truncate">{subtitle}</p>
-    </div>
-    {count > 0 && (
-      <span className="flex items-center justify-center w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
-        {count}
-      </span>
-    )}
-    <div className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all">
-      <ArrowUpRight className="w-5 h-5" />
-    </div>
-  </button>
-);
-
-// --- MAIN COMPONENT ---
+const statusLabel = (s) => (s === 'pending' ? 'En attente' : s === 'confirmed' ? 'Validee' : s === 'completed' ? 'Terminee' : 'Annulee');
+const statusStyle = (s) => (s === 'pending' ? 'bg-amber-400/15 text-amber-200 border-amber-300/30' : s === 'confirmed' ? 'bg-emerald-400/15 text-emerald-200 border-emerald-300/30' : s === 'completed' ? 'bg-cyan-400/15 text-cyan-100 border-cyan-300/30' : 'bg-rose-400/15 text-rose-200 border-rose-300/30');
 
 function ManagerDashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useContext(AuthContext);
-
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [toasts, setToasts] = useState([]);
-  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
-  const [messageText, setMessageText] = useState('');
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
-
+  const removeToast = useCallback((id) => setToasts((prev) => prev.filter((t) => t.id !== id)), []);
   const addToast = useCallback((message, type = 'info') => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
+    const id = Math.random().toString(36).slice(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => removeToast(id), 4000);
   }, [removeToast]);
 
-  // STABLE LOADING LOGIC
   useEffect(() => {
     if (!isAuthenticated || (user?.role !== 'manager' && user?.role !== 'admin')) {
       navigate('/login');
       return;
     }
-
     const fetchDashboard = async () => {
-      console.log('Chargement dashboard...');
       try {
         setLoading(true);
         const response = await managerService.getDashboard();
         setDashboardData(response.data);
       } catch (err) {
-        console.error('ùå Erreur:', err);
-        const msg = err.response?.data?.message || err.message || 'Erreur inconnue';
-        addToast('Erreur: ' + msg, 'error');
+        addToast(`Erreur: ${err.response?.data?.message || err.message || 'Inconnue'}`, 'error');
       } finally {
         setLoading(false);
       }
     };
-
     fetchDashboard();
   }, [isAuthenticated, user, navigate, addToast]);
 
-  const loadDashboard = async () => {
-    setLoading(true);
-    try {
-      const response = await managerService.getDashboard();
-      setDashboardData(response.data);
-    } catch (err) {
-      addToast(err.message || 'Erreur chargement dashboard', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ACTIONS
   const handleExport = async () => {
     try {
       setIsActionLoading(true);
@@ -154,41 +63,25 @@ function ManagerDashboard() {
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
-      addToast('Export rÈussi', 'success');
+      addToast('Export reussi', 'success');
     } catch {
-      addToast('Erreur lors de l\'export', 'error');
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim()) return;
-    try {
-      setIsActionLoading(true);
-      await managerService.sendMessageToClient(selectedBooking.id, messageText);
-      addToast('Message envoyÈ', 'success');
-      setIsMessageModalOpen(false);
-      setMessageText('');
-    } catch {
-      addToast('Erreur envoi message', 'error');
+      addToast("Erreur lors de l'export", 'error');
     } finally {
       setIsActionLoading(false);
     }
   };
 
   const updateBookingStatus = async (bookingId, action) => {
-    if (!window.confirm(`Voulez-vous ${action === 'confirm' ? 'confirmer' : 'refuser'} cette rÈservation ?`)) return;
-
+    if (!window.confirm(`Voulez-vous ${action === 'confirm' ? 'confirmer' : 'refuser'} cette reservation ?`)) return;
     try {
       setIsActionLoading(true);
       if (action === 'confirm') await managerService.confirmBooking(bookingId);
-      else await managerService.rejectBooking(bookingId, 'RefusÈ par le gestionnaire');
-
-      addToast(`Action effectuÈe: ${action}`, 'success');
-      loadDashboard();
+      else await managerService.rejectBooking(bookingId, 'Refuse par le gestionnaire');
+      addToast('Reservation mise a jour', 'success');
+      const response = await managerService.getDashboard();
+      setDashboardData(response.data);
     } catch {
-      addToast('Erreur lors de l\'action', 'error');
+      addToast("Erreur lors de l'action", 'error');
     } finally {
       setIsActionLoading(false);
     }
@@ -196,437 +89,114 @@ function ManagerDashboard() {
 
   const openClientConversation = (booking) => {
     const participantId = booking?.user?.id;
-
-    if (!participantId) {
-      addToast('Client introuvable pour cette reservation', 'error');
-      return;
-    }
-
+    if (!participantId) return addToast('Client introuvable', 'error');
     const vehicleLabel = [booking?.vehicle?.brand, booking?.vehicle?.model].filter(Boolean).join(' ').trim();
     const prefill = `Bonjour ${booking?.user?.firstName || ''}, je vous contacte au sujet de votre reservation${vehicleLabel ? ` (${vehicleLabel})` : ''}.`;
-    const params = new URLSearchParams({
-      participantId,
-      bookingId: booking?.id || '',
-      prefill
-    });
-
-    navigate(`/messages?${params.toString()}`);
+    navigate(`/messages?${new URLSearchParams({ participantId, bookingId: booking?.id || '', prefill }).toString()}`);
   };
 
-  // DATA PROCESSING
   const stats = dashboardData?.stats || {};
   const bookings = Array.isArray(dashboardData?.recentBookings) ? dashboardData.recentBookings : [];
+  const pendingCount = bookings.filter((b) => b.status === 'pending').length;
+  const occupancyRate = stats.totalVehicles > 0 ? Math.round(((stats.totalVehicles - stats.availableVehicles) / stats.totalVehicles) * 100) : 0;
+  const totalRevenue = stats.totalRevenue || bookings.reduce((sum, b) => sum + Number(b?.totalPrice || 0), 0);
 
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = bookings.filter((b) => {
     if (!b || typeof b !== 'object') return false;
     if (statusFilter !== 'all' && b.status !== statusFilter) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        (b.vehicle?.brand?.toLowerCase() || '').includes(q) ||
-        (b.user?.firstName?.toLowerCase() || '').includes(q)
-      );
-    }
-    return true;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (b.vehicle?.brand?.toLowerCase() || '').includes(q) || (b.vehicle?.model?.toLowerCase() || '').includes(q) || (b.user?.firstName?.toLowerCase() || '').includes(q) || (b.user?.lastName?.toLowerCase() || '').includes(q);
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / itemsPerPage));
   const paginatedBookings = filteredBookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  const pendingCount = bookings.filter(b => b.status === 'pending').length;
-  const occupancyRate = stats.totalVehicles > 0 ? Math.round(((stats.totalVehicles - stats.availableVehicles) / stats.totalVehicles) * 100) : 0;
 
-  if (loading) {
-    return <PageSkeleton variant="dashboard" />;
-  }
+  useEffect(() => setCurrentPage(1), [searchQuery, statusFilter]);
+  if (loading) return <PageSkeleton variant="dashboard" />;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="relative min-h-screen overflow-hidden bg-[#050b1f] p-4 sm:p-6 lg:p-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_86%_18%,rgba(99,102,241,0.18),transparent_38%),radial-gradient(circle_at_72%_86%,rgba(16,185,129,0.12),transparent_35%)]" />
+      <div className="relative mx-auto max-w-7xl space-y-6 font-['Sora']">
+        <div className="fixed right-6 top-6 z-50 flex flex-col gap-2 pointer-events-none">{toasts.map((t) => <div key={t.id} className="pointer-events-auto"><Toast message={t.message} type={t.type} onClose={() => removeToast(t.id)} /></div>)}</div>
 
-        {/* Toast Container */}
-        <div className="fixed top-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
-          {toasts.map((toast) => (
-            <div key={toast.id} className="pointer-events-auto shadow-2xl">
-              <Toast
-                message={toast.message}
-                type={toast.type}
-                onClose={() => removeToast(toast.id)}
-              />
+        <section className="rounded-[2rem] border border-white/15 bg-slate-900/65 p-6 backdrop-blur-xl">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-cyan-100"><Sparkles className="h-3.5 w-3.5" />Command Center</div>
+              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Tableau de bord ultra dynamique</h1>
+              <p className="text-sm font-medium text-slate-300">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
-          ))}
-        </div>
-
-        {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-              Vue d'ensemble
-            </h1>
-            <div className="flex items-center gap-2 text-slate-500 font-medium">
-              <span className="bg-white px-2 py-1 rounded-md border border-slate-200 text-xs uppercase tracking-wider">
-                {user?.role === 'admin' ? 'Administrateur' : 'Manager'}
-              </span>
-              <span>|</span>
-              <p>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <div className="flex gap-3">
+              <button onClick={handleExport} disabled={isActionLoading} className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-60"><Download className="h-4 w-4" />Exporter</button>
+              <button onClick={() => navigate('/manager/add-vehicle')} className="rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-2.5 text-sm font-black text-slate-950">Nouveau vehicule</button>
             </div>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={handleExport}
-              disabled={isActionLoading}
-              className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              <span>Exporter</span>
-            </button>
-            <button className="px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 transition-all flex items-center gap-2">
-              <span>Nouveau vÈhicule</span>
-            </button>
-          </div>
-        </div>
+        </section>
 
-        {/* BENTO GRID LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Flotte</p><p className="mt-2 text-4xl font-black">{stats.totalVehicles || 0}</p><p className="text-sm text-slate-300">{stats.availableVehicles || 0} disponibles</p></div>
+          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Reservations</p><p className="mt-2 text-4xl font-black">{bookings.length || 0}</p><p className="text-sm text-slate-300">{pendingCount} en attente</p></div>
+          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Revenus</p><p className="mt-2 text-4xl font-black">{money(totalRevenue)}</p><p className="text-sm text-slate-300">mise a jour live</p></div>
+          <div className="rounded-3xl border border-white/15 bg-slate-900/70 p-5 text-white"><p className="text-xs uppercase tracking-[0.14em] text-slate-300">Occupation</p><p className="mt-2 text-4xl font-black">{occupancyRate}%</p><p className="text-sm text-slate-300">performance agence</p></div>
+        </section>
 
-          {/* STATS CARDS */}
-          <StatCard
-            title="Flotte Totale"
-            value={stats.totalVehicles || 0}
-            subtext={`${stats.availableVehicles || 0} disponibles`}
-            icon={Car}
-            color="emerald"
-            onClick={() => navigate('/manager/vehicles')}
-          />
-          <StatCard
-            title="RÈservations"
-            value={bookings.length || 0}
-            subtext={`${pendingCount} en attente`}
-            icon={Calendar}
-            trend="+12%"
-            color="indigo"
-            onClick={() => navigate('/manager/bookings')}
-          />
-          <StatCard
-            title="Revenus (Est.)"
-            value="450k"
-            subtext="FCFA ce mois"
-            icon={Wallet}
-            trend="+8%"
-            color="blue"
-            onClick={() => navigate('/manager/revenue')}
-          />
-          <StatCard
-            title="Taux Occup."
-            value={`${occupancyRate}%`}
-            subtext="Performance moyenne"
-            icon={BarChart3}
-            color="amber"
-          />
-
-          {/* MAIN CONTENT AREA: TABLE & QUICK ACTIONS */}
-          <div className="lg:col-span-3 space-y-6">
-
-            {/* TABLE CARD */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_4px_20px_-1px_rgba(0,0,0,0.02)] overflow-hidden">
-              {/* Toolbar */}
-              <div className="p-6 border-b border-slate-50 flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/50">
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Chercher une rÈservation..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white border-0 ring-1 ring-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm transition-shadow text-sm font-medium"
-                  />
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-                  {['all', 'pending', 'confirmed', 'completed'].map(status => (
-                    <button
-                      key={status}
-                      onClick={() => setStatusFilter(status)}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${statusFilter === status
-                        ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10'
-                        : 'bg-white text-slate-500 hover:bg-slate-100 ring-1 ring-slate-200'
-                        }`}
-                    >
-                      {status === 'all' ? 'Toutes' :
-                        status === 'pending' ? 'En attente' :
-                          status === 'confirmed' ? 'ConfirmÈes' : 'TerminÈes'}
-                    </button>
-                  ))}
-                </div>
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+          <div className="overflow-hidden rounded-[1.75rem] border border-white/15 bg-slate-900/70">
+            <div className="flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:w-80">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Chercher reservation..." className="w-full rounded-xl border border-white/15 bg-slate-950/40 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-slate-400" />
               </div>
-
-              {/* Data Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/30 text-left">
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">VÈh vÈhicule</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Client</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">PÈriode</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Statut</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+              <div className="flex gap-2 overflow-x-auto">
+                {['all', 'pending', 'confirmed', 'completed'].map((status) => <button key={status} onClick={() => setStatusFilter(status)} className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wide ${statusFilter === status ? 'bg-gradient-to-r from-cyan-400 to-indigo-500 text-slate-950' : 'border border-white/15 bg-white/5 text-slate-300'}`}>{status === 'all' ? 'Toutes' : statusLabel(status)}</button>)}
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px]">
+                <thead><tr className="border-b border-white/10 text-left text-xs uppercase tracking-[0.14em] text-slate-400"><th className="px-6 py-4">Vehicule</th><th className="px-6 py-4">Client</th><th className="px-6 py-4">Periode</th><th className="px-6 py-4">Statut</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
+                <tbody className="divide-y divide-white/5">
+                  {paginatedBookings.length === 0 ? <tr><td colSpan="5" className="px-6 py-12 text-center text-sm text-slate-400">Aucune reservation trouvee</td></tr> : paginatedBookings.map((b) => (
+                    <tr key={b.id} className="hover:bg-white/[0.03]">
+                      <td className="px-6 py-4 text-white">{b.vehicle?.brand} {b.vehicle?.model}</td>
+                      <td className="px-6 py-4 text-slate-200">{b.user?.firstName} {b.user?.lastName}</td>
+                      <td className="px-6 py-4 text-slate-300">{new Date(b.startDate).toLocaleDateString('fr-FR')} au {new Date(b.endDate).toLocaleDateString('fr-FR')}</td>
+                      <td className="px-6 py-4"><span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusStyle(b.status)}`}>{statusLabel(b.status)}</span></td>
+                      <td className="px-6 py-4"><div className="flex justify-end gap-1">
+                        <button onClick={() => { setSelectedBooking(b); setIsDetailsModalOpen(true); }} className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-300"><Eye className="h-4 w-4" /></button>
+                        <button onClick={() => openClientConversation(b)} className="rounded-lg border border-cyan-300/20 bg-cyan-400/15 p-2 text-cyan-100"><MessageCircle className="h-4 w-4" /></button>
+                        {b.status === 'pending' ? <>
+                          <button onClick={() => updateBookingStatus(b.id, 'confirm')} className="rounded-lg border border-emerald-300/20 bg-emerald-400/15 p-2 text-emerald-100"><CheckCircle className="h-4 w-4" /></button>
+                          <button onClick={() => updateBookingStatus(b.id, 'reject')} className="rounded-lg border border-rose-300/20 bg-rose-400/15 p-2 text-rose-100"><XCircle className="h-4 w-4" /></button>
+                        </> : null}
+                      </div></td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {paginatedBookings.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center text-slate-400 font-medium">
-                          Aucune rÈservation trouvÈe
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedBookings.map((booking) => (
-                        <tr key={booking.id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold shrink-0">
-                                <Car className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-700">{booking.vehicle?.brand} {booking.vehicle?.model}</p>
-                                <p className="text-xs text-slate-400 font-medium">{booking.vehicle?.licensePlate || 'Sans plaque'}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 font-bold text-xs shrink-0">
-                                {booking.user?.firstName?.[0] || 'U'}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-bold text-slate-700 truncate max-w-[120px]">
-                                  {booking.user?.firstName} {booking.user?.lastName}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-slate-600">
-                              {new Date(booking.startDate).toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-slate-400 font-medium">
-                              Üí {new Date(booking.endDate).toLocaleDateString()}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${booking.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                              booking.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                booking.status === 'completed' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                                  'bg-red-50 text-red-600 border-red-100'
-                              }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${booking.status === 'pending' ? 'bg-amber-500' :
-                                booking.status === 'confirmed' ? 'bg-emerald-500' :
-                                  booking.status === 'completed' ? 'bg-slate-500' : 'bg-red-500'
-                                }`} />
-                              {booking.status === 'pending' ? 'En attente' :
-                                booking.status === 'confirmed' ? 'ValidÈe' :
-                                  booking.status === 'completed' ? 'TerminÈe' : 'AnnulÈe'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1 opacity-100">
-                              <button
-                                onClick={() => { setSelectedBooking(booking); setIsDetailsModalOpen(true); }}
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Voir dÈtails"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => openClientConversation(booking)}
-                                className="p-2 text-indigo-600 bg-indigo-50 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors"
-                                title="Ouvrir la messagerie" aria-label="Ouvrir la messagerie avec le client"
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                              </button>
-                              {booking.status === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={() => updateBookingStatus(booking.id, 'confirm')}
-                                    className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                    title="Accepter"
-                                  >
-                                    <CheckCircle className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => updateBookingStatus(booking.id, 'reject')}
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Refuser"
-                                  >
-                                    <XCircle className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {filteredBookings.length > itemsPerPage && (
-                <div className="p-4 border-t border-slate-50 flex justify-between items-center bg-slate-50/30">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="text-sm font-bold text-slate-500 disabled:opacity-30 hover:text-blue-600 transition-colors"
-                  >
-                    Üê PrÈcÈdent
-                  </button>
-                  <span className="text-xs font-medium text-slate-400">Page {currentPage}</span>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredBookings.length / itemsPerPage), p + 1))}
-                    disabled={currentPage >= Math.ceil(filteredBookings.length / itemsPerPage)}
-                    className="text-sm font-bold text-slate-500 disabled:opacity-30 hover:text-blue-600 transition-colors"
-                  >
-                    Suivant Üí
-                  </button>
-                </div>
-              )}
+                  ))}
+                </tbody>
+              </table>
             </div>
+            {filteredBookings.length > itemsPerPage ? <div className="flex items-center justify-between border-t border-white/10 px-5 py-4 text-sm text-slate-300"><button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>Precedent</button><span>Page {currentPage}/{totalPages}</span><button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>Suivant</button></div> : null}
           </div>
 
-          {/* SIDEBAR WIDGETS */}
-          <div className="space-y-6">
-
-            {/* Action Widget */}
-            <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[60px] opacity-40 mix-blend-screen" />
-              <h3 className="text-lg font-bold mb-4 relative z-10">Actions Rapides</h3>
-              <div className="space-y-3 relative z-10">
-                <QuickActionRow
-                  icon={Users}
-                  title="IdentitÈs ‡ vÈrifier"
-                  subtitle="Validation documents KYC"
-                  count={pendingCount} // Assuming we can use this or similar
-                  onClick={() => user?.role === 'admin' && navigate('/admin/kyc')}
-                  color="amber"
-                />
-                <QuickActionRow
-                  icon={Clock}
-                  title="RÈservations"
-                  subtitle="GÈrer le planning"
-                  onClick={() => navigate('/manager/bookings')}
-                  color="blue"
-                />
+          <div className="space-y-4">
+            <div className="rounded-[1.75rem] border border-white/15 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-5">
+              <h3 className="text-lg font-black text-white">Actions rapides</h3>
+              <div className="mt-4 space-y-3">
+                <button onClick={() => (user?.role === 'admin' ? navigate('/admin/kyc') : navigate('/manager/kyc'))} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-left"><ShieldCheck className="h-5 w-5 text-amber-200" /><div><p className="text-sm font-bold text-white">Identites a verifier</p><p className="text-xs text-slate-300">{pendingCount} en attente</p></div></button>
+                <button onClick={() => navigate('/manager/bookings')} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-left"><Clock className="h-5 w-5 text-indigo-200" /><div><p className="text-sm font-bold text-white">Planning reservations</p><p className="text-xs text-slate-300">gerer les disponibilites</p></div></button>
               </div>
             </div>
-
-            {/* Profile/Agency Widget */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-lg shadow-slate-200/50">
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Votre Agence</h3>
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
-                  A
-                </div>
-                <div>
-                  <p className="font-bold text-slate-800">AfriRide YaoundÈ</p>
-                  <p className="text-xs text-slate-400 font-medium">ID: {user?.agencyId?.split('-')?.[0] || '...'}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-medium">Performance</span>
-                  <span className="text-green-600 font-bold">Excellent</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-green-500 h-full w-[85%] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.4)]" />
-                </div>
-              </div>
-            </div>
-
+            <div className="rounded-[1.75rem] border border-white/15 bg-slate-900/70 p-5"><p className="text-xs uppercase tracking-[0.16em] text-slate-400">Votre agence</p><p className="mt-2 text-xl font-black text-white">AfriRide Yaounde</p><p className="text-sm text-slate-300">ID: {user?.agencyId?.split('-')?.[0] || '...'}</p></div>
           </div>
-
-        </div>
+        </section>
       </div>
 
-      {/* MODALS */}
-      <Modal
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
-        title="DÈtails de la rÈservation"
-        size="lg"
-      >
-        {selectedBooking && (
-          <div className="space-y-6 p-2">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-slate-50 p-4 rounded-xl">
-                <p className="text-xs font-bold text-slate-400 uppercase mb-1">VÈhicule</p>
-                <p className="text-lg font-bold text-slate-800">{selectedBooking.vehicle?.brand} {selectedBooking.vehicle?.model}</p>
-                <p className="text-sm text-slate-500">{selectedBooking.vehicle?.year} | {selectedBooking.vehicle?.licensePlate}</p>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-xl">
-                <p className="text-xs font-bold text-slate-400 uppercase mb-1">Client</p>
-                <p className="text-lg font-bold text-slate-800">{selectedBooking.user?.firstName} {selectedBooking.user?.lastName}</p>
-                <p className="text-sm text-slate-500">{selectedBooking.user?.phone}</p>
-                <p className="text-sm text-slate-500">{selectedBooking.user?.email}</p>
-              </div>
-              <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                <p className="text-xs font-bold text-indigo-400 uppercase mb-1">PÈriode</p>
-                <p className="text-base font-bold text-indigo-900">
-                  {new Date(selectedBooking.startDate).toLocaleDateString()}
-                  <span className="mx-2 text-indigo-300">ûî</span>
-                  {new Date(selectedBooking.endDate).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                <p className="text-xs font-bold text-emerald-400 uppercase mb-1">Total</p>
-                <p className="text-2xl font-black text-emerald-700">
-                  {parseFloat(selectedBooking.totalPrice).toLocaleString()} <span className="text-sm font-medium text-emerald-600/60">FCFA</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+      <Modal isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} title="Details de la reservation" size="lg">
+        {selectedBooking ? <div className="space-y-2"><p><strong>Vehicule:</strong> {selectedBooking.vehicle?.brand} {selectedBooking.vehicle?.model}</p><p><strong>Client:</strong> {selectedBooking.user?.firstName} {selectedBooking.user?.lastName}</p><p><strong>Periode:</strong> {new Date(selectedBooking.startDate).toLocaleDateString('fr-FR')} au {new Date(selectedBooking.endDate).toLocaleDateString('fr-FR')}</p><p><strong>Total:</strong> {money(selectedBooking.totalPrice)}</p></div> : null}
       </Modal>
-
-      <Modal
-        isOpen={isMessageModalOpen}
-        onClose={() => setIsMessageModalOpen(false)}
-        title="Envoyer un message"
-      >
-        <div className="space-y-4">
-          <textarea
-            className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[120px] resize-none text-slate-700 placeholder:text-slate-400 bg-slate-50"
-            placeholder="…crivez votre message au client..."
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-          />
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setIsMessageModalOpen(false)}
-              className="px-5 py-2.5 font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleSendMessage}
-              disabled={isActionLoading || !messageText.trim()}
-              className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:shadow-blue-600/40 transition-all disabled:opacity-50 disabled:shadow-none"
-            >
-              Envoyer
-            </button>
-          </div>
-        </div>
-      </Modal>
-
     </div>
   );
 }
 
 export default ManagerDashboard;
-
-
-
-
-
-
-
-
-
-
